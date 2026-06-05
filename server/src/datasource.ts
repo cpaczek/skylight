@@ -147,7 +147,7 @@ export class Poller {
     if (this.timer) return;
     void this.tick();
     this.timer = setInterval(() => void this.tick(), this.o.pollMs);
-    if (this.o.supplementApi) {
+    if (this.o.supplementApi && this.o.source === "radio") {
       void this.refreshApi();
       this.apiTimer = setInterval(() => void this.refreshApi(), this.o.apiPollMs);
     }

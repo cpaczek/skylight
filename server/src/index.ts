@@ -25,11 +25,11 @@ const RADIO_URL =
   process.env.AIRCRAFT_JSON_URL ?? "http://localhost:8080/data/aircraft.json";
 const API_URL =
   process.env.API_URL ?? "https://api.airplanes.live/v2/point/{lat}/{lon}/{r}";
-const POLL_MS = Number(process.env.POLL_MS ?? 1000);
+const POLL_MS = Number(process.env.POLL_MS ?? (SOURCE === "api" ? 5000 : 1000));
 const ROUTE_CACHE_HOURS = Number(process.env.ROUTE_CACHE_HOURS ?? 12);
 // When on radio, also poll the API and merge (keeps landing aircraft alive).
 const SUPPLEMENT_API = (process.env.SUPPLEMENT_API ?? "1") !== "0";
-const API_POLL_MS = Number(process.env.API_POLL_MS ?? 4000);
+const API_POLL_MS = Number(process.env.API_POLL_MS ?? 10000);
 
 async function main(): Promise<void> {
   const store = new ConfigStore(resolve(DATA_DIR, "config.json"));
@@ -75,6 +75,29 @@ async function main(): Promise<void> {
   app.get("/api/aircraft", (_req, res) => res.json(poller.getSnapshot()));
   app.get("/api/status", (_req, res) => res.json(poller.getStatus()));
   app.get("/api/tle", async (_req, res) => res.json(await tleStore.get()));
+  app.get("/api/geocode", async (req, res) => {
+    const q = String(req.query.q || "").trim();
+    if (!q) return res.json(null);
+    const m = q.match(/^[\s]*(-?\d+\.?\d*)[\s,]+(-?\d+\.?\d*)[\s]*$/);
+    if (m) {
+      const lat = parseFloat(m[1]);
+      const lon = parseFloat(m[2]);
+      if (!isNaN(lat) && !isNaN(lon)) return res.json({ lat, lon, name: `${lat.toFixed(4)}, ${lon.toFixed(4)}` });
+    }
+    try {
+      const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=1`;
+      const r = await fetch(url, { headers: { "User-Agent": "skylight/0.1 (ceiling tracker)" } });
+      if (r.ok) {
+        const js = await r.json();
+        if (Array.isArray(js) && js[0]) {
+          const { lat, lon, display_name } = js[0];
+          const name = (display_name || q).split(",")[0].trim() || q;
+          return res.json({ lat: parseFloat(lat), lon: parseFloat(lon), name });
+        }
+      }
+    } catch {}
+    return res.json({ lat: 0, lon: 0, name: q });
+  });
   app.post("/api/source", (req, res) => {
     const s = req.body?.source;
     if (s !== "radio" && s !== "api") {

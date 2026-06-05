@@ -33,6 +33,8 @@ export function Control() {
 
   // ISS pass finder (for the Sky section).
   const [tles, setTles] = useState<Tle[]>([]);
+  const [locEditing, setLocEditing] = useState(false);
+  const [locInput, setLocInput] = useState("");
   useEffect(() => {
     let on = true;
     fetch("/api/tle")
@@ -69,11 +71,57 @@ export function Control() {
           Ceiling Tracker
         </div>
         <div className="stat">
-          {state.status?.source ?? "—"} · {state.aircraft.length} overhead
+          {state.status ? (
+            <>
+              <span className={`dot ${state.status.ok ? "ok" : "bad"}`} />
+              {state.status.source} · {state.aircraft.length} overhead
+              {state.status.message ? ` (${state.status.message})` : ""}
+            </>
+          ) : "— · 0 overhead"}
         </div>
       </header>
 
       <main>
+        <Section title="Location">
+          <Row label="Name">
+            <span className="static-value">{cfg.locationName || "(unnamed)"}</span>
+          </Row>
+          <Row label="Latitude">
+            <span className="static-value">{Math.abs(cfg.centerLat).toFixed(4)}° {cfg.centerLat >= 0 ? "N" : "S"}</span>
+          </Row>
+          <Row label="Longitude">
+            <span className="static-value">{Math.abs(cfg.centerLon).toFixed(4)}° {cfg.centerLon >= 0 ? "E" : "W"}</span>
+          </Row>
+
+          <div className="chips">
+            {!locEditing ? (
+              <button className="chip" onClick={() => { setLocInput(`${cfg.centerLat.toFixed(4)}, ${cfg.centerLon.toFixed(4)}`); setLocEditing(true); }}>
+                Change location
+              </button>
+            ) : (
+              <div style={{ display: "flex", gap: "6px", width: "100%", alignItems: "center" }}>
+                <input
+                  type="text"
+                  value={locInput}
+                  onChange={(e) => setLocInput(e.target.value)}
+                  placeholder="37.62,-122.38 or SFO or San Francisco"
+                  style={{ flex: 1, font: "12px var(--mono)", padding: "4px 6px", border: "1px solid var(--line)", borderRadius: "4px", background: "var(--panel-2)", color: "var(--text)" }}
+                />
+                <button className="chip on" onClick={async () => {
+                  const q = locInput.trim();
+                  if (!q) { setLocEditing(false); return; }
+                  const res = await fetch(`/api/geocode?q=${encodeURIComponent(q)}`).then(r => r.json()).catch(() => null);
+                  if (res && typeof res.lat === "number") {
+                    set({ centerLat: res.lat, centerLon: res.lon, locationName: String(res.name || q) });
+                  }
+                  setLocEditing(false);
+                }}>Update</button>
+                <button className="chip" onClick={() => setLocEditing(false)}>Cancel</button>
+              </div>
+            )}
+          </div>
+        </Section>
+
         <Section title="Calibration">
           <Row label="Rotation" hint="align field to ceiling">
             <Slider value={cfg.rotationDeg} min={0} max={355} step={5} unit="°"

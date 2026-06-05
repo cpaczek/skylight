@@ -94,9 +94,10 @@ DATA_SOURCE=api pnpm dev
 
 - **Display:** http://localhost:5173/
 - **Control panel:** http://localhost:5173/control.html (or from your phone: `http://<your-ip>:5173/control.html`)
+  The control header shows live "source · N overhead". With `DATA_SOURCE=api` you should see some traffic within `radiusMiles` near your configured `center*` (give it 5–10s; avoid spamming restarts).
 
-Set your location in the control panel area is coming; for now set `centerLat` /
-`centerLon` in [`shared/src/config.ts`](shared/src/config.ts) (defaults to SFO).
+Location (lat/lon + name) is shown (read-only for now) in the control panel.
+For now, edit `server/data/config.json` (or `shared/src/config.ts` defaults) and restart to change center. (Defaults to SFO.)
 
 ### With a radio (locally)
 
@@ -124,7 +125,7 @@ fields:
 
 | | |
 |---|---|
-| `centerLat` / `centerLon` | **Your location** — where you're looking up. |
+| `centerLat` / `centerLon` / `locationName` | **Your location** — where you're looking up. Shown at top of control panel. |
 | `radiusMiles` | How far out to show (default 3 — "what you could realistically see"). |
 | `rotationDeg` / `mirrorX` | Calibration for the looking-up flip (tune against a real pass). |
 | `theme` | `ambient` · `telemetry` · `focus`. |

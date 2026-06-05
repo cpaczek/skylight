@@ -39,6 +39,8 @@ export interface Config {
   // --- location & scope ---
   centerLat: number;
   centerLon: number;
+  /** Human-readable name for the current center location (UI display + future picker). */
+  locationName: string;
   radiusMiles: number;
 
   // --- calibration (tune against a real overhead pass) ---
@@ -115,6 +117,7 @@ export const DEFAULT_CONFIG: Config = {
   // location — ideally where you'll be looking up at the ceiling.
   centerLat: 37.6213,
   centerLon: -122.379,
+  locationName: "SFO",
   radiusMiles: 3,
 
   rotationDeg: 0,
