@@ -108,9 +108,9 @@ async function main(): Promise<void> {
   // --- static web (production build) ---
   if (existsSync(WEB_DIST)) {
     app.use(express.static(WEB_DIST));
-    app.get("/setup", (_req, res) => res.sendFile(resolve(WEB_DIST, "setup.html")));
-    app.get("/control", (_req, res) => res.sendFile(resolve(WEB_DIST, "control.html")));
-    app.get("/", (_req, res) => res.sendFile(resolve(WEB_DIST, "index.html")));
+    app.get("/setup", (_req, res) => res.redirect(302, "/setup.html"));
+    app.get("/control", (_req, res) => res.redirect(302, "/control.html"));
+    app.get("/", (_req, res) => res.redirect(302, "/index.html"));
   } else {
     app.get("/", (_req, res) =>
       res

@@ -1,4 +1,6 @@
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import type { FormEvent } from "react";
+import type { LeafletMouseEvent } from "leaflet";
 import { CircleMarker, MapContainer, TileLayer, useMap, useMapEvents } from "react-leaflet";
 
 interface GeocodeResult {
@@ -18,7 +20,7 @@ const PRESETS = [
 
 function ClickToSet({ onPick }: { onPick: (lat: number, lon: number) => void }) {
   useMapEvents({
-    click: (e) => onPick(e.latlng.lat, e.latlng.lng),
+    click: (e: LeafletMouseEvent) => onPick(e.latlng.lat, e.latlng.lng),
   });
   return null;
 }
