@@ -221,14 +221,14 @@ export function Diagnostics() {
           </Row>
           <Row label="WS reconnects">{wsReconnects}</Row>
           <Row label="Last WS message">{elapsed(lastWsMs)}</Row>
-          <Row label="Last WS error">{state.error ?? "â€”"}</Row>
+          <Row label="Last WS error">{state.error ?? "—"}</Row>
         </Section>
 
         <Section title="Data">
           <Row label="Data source">{state.status?.source ?? "—"}</Row>
           <Row label="Aircraft received">{state.aircraft.length}</Row>
-          <Row label="Unique aircraft today">{flightStats?.uniqueAircraft ?? "â€”"}</Row>
-          <Row label="Active in flight log">{flightStats?.activeAircraft ?? "â€”"}</Row>
+          <Row label="Unique aircraft today">{flightStats?.uniqueAircraft ?? "—"}</Row>
+          <Row label="Active in flight log">{flightStats?.activeAircraft ?? "—"}</Row>
           <Row label="Source status">
             <StatusDot ok={state.status?.ok ?? false} />
             {state.status?.ok ? "ok" : "error"}

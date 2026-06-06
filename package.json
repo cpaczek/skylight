@@ -7,15 +7,20 @@
   "packageManager": "pnpm@10.28.2",
   "scripts": {
     "dev": "concurrently -n server,web -c green,cyan \"pnpm dev:server\" \"pnpm dev:web\"",
+    "dev:api": "cross-env DATA_SOURCE=api pnpm dev",
+    "dev:radio": "cross-env DATA_SOURCE=radio pnpm dev",
     "dev:server": "pnpm -F server dev",
     "dev:web": "pnpm -F web dev",
     "build": "pnpm -F web build",
     "generate:cities": "node scripts/generate-cities.mjs",
     "start": "pnpm -F server start",
+    "start:api": "cross-env DATA_SOURCE=api pnpm -F server start",
+    "start:radio": "cross-env DATA_SOURCE=radio pnpm -F server start",
     "typecheck": "tsc -p shared/tsconfig.json && pnpm -F server typecheck && pnpm -F web typecheck"
   },
   "devDependencies": {
     "concurrently": "^9.1.0",
+    "cross-env": "^7.0.3",
     "playwright": "^1.60.0",
     "typescript": "^5.7.2"
   },
