@@ -1,0 +1,74 @@
+{
+  "name": "esbuild",
+  "version": "0.28.0",
+  "description": "An extremely fast JavaScript and CSS bundler and minifier.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/evanw/esbuild.git"
+  },
+  "scripts": {
+    "postinstall": "node install.js"
+  },
+  "main": "lib/main.js",
+  "types": "lib/main.d.ts",
+  "engines": {
+    "node": ">=18"
+  },
+  "bin": {
+    "esbuild": "bin/esbuild"
+  },
+  "optionalDependencies": {
+    "@esbuild/aix-ppc64": "0.28.0",
+    "@esbuild/android-arm": "0.28.0",
+    "@esbuild/android-arm64": "0.28.0",
+    "@esbuild/android-x64": "0.28.0",
+    "@esbuild/darwin-arm64": "0.28.0",
+    "@esbuild/darwin-x64": "0.28.0",
+    "@esbuild/freebsd-arm64": "0.28.0",
+    "@esbuild/freebsd-x64": "0.28.0",
+    "@esbuild/linux-arm": "0.28.0",
+    "@esbuild/linux-arm64": "0.28.0",
+    "@esbuild/linux-ia32": "0.28.0",
+    "@esbuild/linux-loong64": "0.28.0",
+    "@esbuild/linux-mips64el": "0.28.0",
+    "@esbuild/linux-ppc64": "0.28.0",
+    "@esbuild/linux-riscv64": "0.28.0",
+    "@esbuild/linux-s390x": "0.28.0",
+    "@esbuild/linux-x64": "0.28.0",
+    "@esbuild/netbsd-arm64": "0.28.0",
+    "@esbuild/netbsd-x64": "0.28.0",
+    "@esbuild/openbsd-arm64": "0.28.0",
+    "@esbuild/openbsd-x64": "0.28.0",
+    "@esbuild/openharmony-arm64": "0.28.0",
+    "@esbuild/sunos-x64": "0.28.0",
+    "@esbuild/win32-arm64": "0.28.0",
+    "@esbuild/win32-ia32": "0.28.0",
+    "@esbuild/win32-x64": "0.28.0"
+  },
+  "license": "MIT",
+  "esbuild.binaryHashes": {
+    "@esbuild/aix-ppc64/bin/esbuild": "2037fe2a315e737da7d8fbfff5a582243e0a2ee32462f08c69d4833b4e3f9e06",
+    "@esbuild/android-arm64/bin/esbuild": "6acacac48d2104e6e58bd92104e86acfb3c8f344e965a910a749ea024ec044e5",
+    "@esbuild/darwin-arm64/bin/esbuild": "6f0e1237f63fa3bc03963e58f0b0be1b9bfacd8f2dc9a3f28483e8f97e4ef2d6",
+    "@esbuild/darwin-x64/bin/esbuild": "23dadf855f4ef8cf7c159ed5e4018b8f95d66f7e230a3a04f0add7fb809640ad",
+    "@esbuild/freebsd-arm64/bin/esbuild": "94f2b3af237a7fb2c5061f311e35b7fca15553304f77222b4da7996a35049b88",
+    "@esbuild/freebsd-x64/bin/esbuild": "c9f571484b1661b93c90cca5781fccd8fc08116eccd4c77079452e51aa2a8240",
+    "@esbuild/linux-arm/bin/esbuild": "cd2cf1814f32e671c3765e9a26da6a28fc659be2f95426e8f4a116a1f4eb6949",
+    "@esbuild/linux-arm64/bin/esbuild": "f76afb23c4c27f7837a4fc5fc7123e2e2c75c7f8c6a54e09bddfc06d39e288dd",
+    "@esbuild/linux-ia32/bin/esbuild": "37ce681c3d0193063cbbf95267d191583f2ffbb818fc81716915f99613af42e9",
+    "@esbuild/linux-loong64/bin/esbuild": "0565b36f66537e657447aacf6a79f0d4fb91bca78803d20e46c9077e75af8230",
+    "@esbuild/linux-mips64el/bin/esbuild": "33e1bdf0e9423efddb2515b0a29fa409826a18eadd6340fff0e3927574b58475",
+    "@esbuild/linux-ppc64/bin/esbuild": "38a3dbbce29bb4ffb5fa2121478f46eb0d6d4979687718c20111372ccfdba169",
+    "@esbuild/linux-riscv64/bin/esbuild": "2a7317332a2d2bc27dc0ad33123571fa1a9f3aa448c07f6eb7b7c11354e49da8",
+    "@esbuild/linux-s390x/bin/esbuild": "d4eb9dcf9f112fee07d3f2256b397cc1ff49ac097d579d07dc5ceacec1276c12",
+    "@esbuild/linux-x64/bin/esbuild": "aafacdf135322bf47c882a4ea4db33d0375583f5b9c3fd2d4e12258e470568be",
+    "@esbuild/netbsd-arm64/bin/esbuild": "b4d529ea102b3d8e1d77f136be1d8b8496d641c216db8e4ce314f01b9ba02cd1",
+    "@esbuild/netbsd-x64/bin/esbuild": "ef999b6e59c2f7ed319f0bc804bffd9c5fec4dd7fd60c77f52300a7ffde2f12d",
+    "@esbuild/openbsd-arm64/bin/esbuild": "5de4790175cb306939af247b0a33036067a2677162d1a79635c77161c13cebee",
+    "@esbuild/openbsd-x64/bin/esbuild": "1b0dffef766fd0443f76b3031535a79ebf91050e0438399569539f9eae940d24",
+    "@esbuild/sunos-x64/bin/esbuild": "81ded843321d3d7a51986859ce859ea8d497e6fa4e3400c9d5ba3df0671a12df",
+    "@esbuild/win32-arm64/esbuild.exe": "ab1477cf488a7f961c3cd7da0689e4a78f8cac3c30eb1021ca0dba46aab25493",
+    "@esbuild/win32-ia32/esbuild.exe": "6b687d79c8d59bee797ac9872f3e25f229451059e12e60951f476a32d0e8ee71",
+    "@esbuild/win32-x64/esbuild.exe": "2ccfd6d5292493a810d21c0b40f9de3ff5252a0a24eb5dea3df07f33dcea0c0e"
+  }
+}

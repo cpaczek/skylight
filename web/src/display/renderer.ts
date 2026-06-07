@@ -569,6 +569,9 @@ export class Renderer {
         ctx.fill();
         ctx.shadowBlur = 0;
         if (iss) this.skyLabel({ x: p.x + 6, y: p.y - 6 }, "ISS", cfg, 0.9 * b, "#8CFFD6");
+        else if (cfg.showSatelliteLabels && sat.name) {
+          this.skyLabel({ x: p.x + 6, y: p.y - 4 }, sat.name, cfg, 0.6 * b);
+        }
       }
     }
   }

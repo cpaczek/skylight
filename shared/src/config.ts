@@ -98,6 +98,7 @@ export interface Config {
   showSun: boolean;
   showMoon: boolean;
   showSatellites: boolean; // includes the ISS
+  showSatelliteLabels: boolean;
   /** Faintest star magnitude to draw (higher = more stars). */
   starMagLimit: number;
   /** Offset the sky clock for testing/scrubbing, minutes (0 = live). */
@@ -174,6 +175,7 @@ export const DEFAULT_CONFIG: Config = {
   showSun: true,
   showMoon: true,
   showSatellites: true,
+  showSatelliteLabels: false,
   starMagLimit: 2.6,
   skyTimeOffsetMin: 0,
 
