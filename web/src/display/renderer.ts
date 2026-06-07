@@ -174,6 +174,12 @@ export class Renderer {
   private activeFollowHex = "";
   private visibleHits: AircraftHit[] = [];
 
+  // ── Pan / explore mode ──────────────────────────────────────────────────────
+  /** Extra camera offset set by the drag-to-pan gesture (meters, config coords). */
+  private panOffset: Meters = { east: 0, north: 0 };
+  /** True while the user is actively dragging. */
+  private panning = false;
+
   constructor(
     private canvas: HTMLCanvasElement,
     private getConfig: () => Config,
@@ -254,6 +260,62 @@ export class Renderer {
 
   getAircraftHit(hex: string): AircraftHit | null {
     return this.visibleHits.find((hit) => hit.aircraft.hex.toLowerCase() === hex.toLowerCase()) ?? null;
+  }
+
+  // ── Pan / explore mode ──────────────────────────────────────────────────────
+
+  /**
+   * Called on every mousemove/touchmove during a pan gesture.
+   * `dx`/`dy` are screen-pixel deltas since the last call.
+   * The renderer shifts the view in real-time without touching config.
+   */
+  applyPanDelta(dx: number, dy: number): void {
+    const cfg = this.getConfig();
+    const pxPerM = pxPerMeter(this.w, this.h, cfg.radiusMiles);
+    // Screen delta → local meters.  Note: screen-Y is inverted vs north.
+    // We also need to un-rotate and un-mirror to get back to config space.
+    const DEG = Math.PI / 180;
+    const angle = cfg.rotationDeg * DEG;
+    const cos = Math.cos(angle);
+    const sin = Math.sin(angle);
+    // Un-mirror first.
+    const sdx = cfg.mirrorX ? dx : -dx;
+    const sdy = cfg.mirrorY ? -dy : dy;
+    // Un-rotate.
+    const east  =  (sdx * cos + sdy * sin) / pxPerM;
+    const north = (-sdx * sin + sdy * cos) / pxPerM;
+    this.panOffset = {
+      east:  this.panOffset.east  + east,
+      north: this.panOffset.north + north,
+    };
+    this.panning = true;
+  }
+
+  /** Clear the pan offset (e.g. after committing the new center). */
+  resetPan(): void {
+    this.panOffset = { east: 0, north: 0 };
+    this.panning = false;
+  }
+
+  /**
+   * Convert the current pan offset to a lat/lon delta so the caller
+   * can commit the new center to config.
+   * Returns { centerLat, centerLon } ready to pass to patchConfig.
+   */
+  getPannedCenter(): { centerLat: number; centerLon: number } {
+    const cfg = this.getConfig();
+    const DEG = Math.PI / 180;
+    const dLat = this.panOffset.north / 110540;
+    const dLon = this.panOffset.east  / (111320 * Math.cos(cfg.centerLat * DEG));
+    return {
+      centerLat: cfg.centerLat + dLat,
+      centerLon: cfg.centerLon + dLon,
+    };
+  }
+
+  /** Whether a pan is currently in progress. */
+  isPanning(): boolean {
+    return this.panning;
   }
 
   resize(): void {
@@ -407,6 +469,9 @@ export class Renderer {
     this.drawOverlays(cfg, proj);
     if (cfg.showAirport) this.drawAirport(cfg, proj);
     if (followHex && cfg.showFollowContext) this.drawFollowPlaceLabels(cfg, proj);
+    if (this.panning || (this.panOffset.east !== 0 || this.panOffset.north !== 0)) {
+      this.drawPanOverlay(cfg, proj);
+    }
 
     const visible: Visible[] = [];
 
@@ -901,8 +966,8 @@ export class Renderer {
 
   private relativeToFollow(m: Meters): Meters {
     return {
-      east: m.east - this.followOffset.east,
-      north: m.north - this.followOffset.north,
+      east:  m.east  - this.followOffset.east  - this.panOffset.east,
+      north: m.north - this.followOffset.north - this.panOffset.north,
     };
   }
 
@@ -1426,6 +1491,79 @@ export class Renderer {
     ctx.shadowColor = "rgba(0,0,0,0.8)";
     ctx.shadowBlur = 4;
     ctx.fillText(`Estimated position · ${count} track${count !== 1 ? "s" : ""}`, x, y);
+    ctx.restore();
+  }
+
+  /** Drawn while a pan offset is active — shows new center coordinates. */
+  private drawPanOverlay(cfg: Config, proj: ProjOpts): void {
+    const ctx = this.ctx;
+    const cx = this.w / 2;
+    const cy = this.h / 2;
+    const b  = cfg.brightness;
+    const rPx = cfg.radiusMiles * 1609.34 * proj.pxPerM;
+
+    // Animated dashed ring at the current (panned) radius.
+    const dashLen   = 10;
+    const gapLen    = 7;
+    const dashOffset = -(this.frameT * 28) % (dashLen + gapLen);
+
+    ctx.save();
+
+    // Outer vignette — subtly dims outside the radius circle.
+    const vig = ctx.createRadialGradient(cx, cy, rPx * 0.7, cx, cy, rPx * 1.2);
+    vig.addColorStop(0, "rgba(0,0,0,0)");
+    vig.addColorStop(1, `rgba(0,0,0,${0.36 * b})`);
+    ctx.fillStyle = vig;
+    ctx.beginPath();
+    ctx.rect(0, 0, this.w, this.h);
+    ctx.arc(cx, cy, rPx * 1.2, 0, Math.PI * 2, true);
+    ctx.fill("evenodd");
+
+    // Dashed radius ring.
+    ctx.beginPath();
+    ctx.arc(cx, cy, rPx, 0, Math.PI * 2);
+    ctx.strokeStyle = `rgba(155,126,207,${0.65 * b})`;
+    ctx.lineWidth = 1.2;
+    ctx.setLineDash([dashLen, gapLen]);
+    ctx.lineDashOffset = dashOffset;
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Small crosshair — 4 short arms with a gap at center.
+    const arm = 14;
+    const gap = 5;
+    ctx.strokeStyle = `rgba(155,126,207,${0.85 * b})`;
+    ctx.lineWidth = 1;
+    for (const [x1, y1, x2, y2] of [
+      [cx - arm, cy,       cx - gap, cy      ],
+      [cx + gap, cy,       cx + arm, cy      ],
+      [cx,       cy - arm, cx,       cy - gap],
+      [cx,       cy + gap, cx,       cy + arm],
+    ] as [number, number, number, number][]) {
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.stroke();
+    }
+
+    // Center dot.
+    ctx.beginPath();
+    ctx.arc(cx, cy, 2.5, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(155,126,207,${b})`;
+    ctx.fill();
+
+    // Coordinate label just below the crosshair.
+    const { centerLat, centerLon } = this.getPannedCenter();
+    const latStr  = `${Math.abs(centerLat).toFixed(4)}°${centerLat >= 0 ? "N" : "S"}`;
+    const lonStr  = `${Math.abs(centerLon).toFixed(4)}°${centerLon >= 0 ? "E" : "W"}`;
+    ctx.font = `400 11px ${cfg.fonts.mono}`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "top";
+    ctx.fillStyle = `rgba(200,188,230,${0.88 * b})`;
+    ctx.shadowColor = "rgba(0,0,0,0.95)";
+    ctx.shadowBlur = 7;
+    ctx.fillText(`${latStr}  ${lonStr}`, cx, cy + gap + arm + 6);
+
     ctx.restore();
   }
 

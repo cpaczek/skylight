@@ -144,8 +144,8 @@ export const DEFAULT_CONFIG: Config = {
   hideOnGround: true,
 
   interpolate: true,
-  maxExtrapolationSec: 15,
-  staleSec: 30,
+  maxExtrapolationSec: 10,
+  staleSec: 20,
   smoothing: 0.18,
   maxFps: 0,
 

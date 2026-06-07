@@ -14,7 +14,7 @@ body,
   overflow: hidden;
 }
 .display-body {
-  cursor: none; /* hidden on the projector; unclutter also runs on the Pi */
+  cursor: none; /* hidden on the projector */
 }
 .display-root {
   position: fixed;
@@ -27,8 +27,16 @@ body,
   width: 100%;
   height: 100%;
   display: block;
-  cursor: crosshair;
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none; /* let JS handle all touch events */
 }
+.display-canvas.dragging {
+  cursor: grabbing;
+}
+
+/* ── HUD ─────────────────────────────────────────────────────────────────── */
 .hud {
   position: fixed;
   top: 10px;
@@ -48,12 +56,9 @@ body,
   height: 8px;
   border-radius: 50%;
 }
-.hud-dot.ok {
-  background: #4ade80;
-}
-.hud-dot.bad {
-  background: #e0533d;
-}
+.hud-dot.ok  { background: #4ade80; }
+.hud-dot.bad { background: #e0533d; }
+
 .reconnect {
   position: fixed;
   bottom: 14px;
@@ -62,6 +67,7 @@ body,
   color: #6b7280;
 }
 
+/* ── Aircraft action popover ────────────────────────────────────────────── */
 .aircraft-action-popover {
   position: fixed;
   z-index: 20;
@@ -74,8 +80,9 @@ body,
   backdrop-filter: blur(10px);
   color: #e8ecff;
   font-family: "JetBrains Mono", ui-monospace, monospace;
+  /* Prevent the mousedown-on-popover from starting a drag */
+  cursor: default;
 }
-
 .aircraft-action-popover::before {
   content: "";
   position: absolute;
@@ -84,37 +91,32 @@ body,
   width: 12px;
   height: 12px;
   border-left: 1px solid rgba(174, 182, 198, 0.28);
-  border-top: 1px solid rgba(174, 182, 198, 0.28);
+  border-top:  1px solid rgba(174, 182, 198, 0.28);
   background: rgba(8, 10, 15, 0.9);
   transform: rotate(45deg);
 }
-
 .aircraft-action-kicker {
   color: #7d879a;
   font-size: 9px;
   letter-spacing: 0.14em;
   text-transform: uppercase;
 }
-
 .aircraft-action-flight {
   margin-top: 5px;
   font-size: 18px;
   font-weight: 700;
 }
-
 .aircraft-action-meta {
   min-height: 15px;
   margin-top: 4px;
   color: #9ba4b5;
   font-size: 10px;
 }
-
 .aircraft-action-buttons {
   display: grid;
   gap: 6px;
   margin-top: 12px;
 }
-
 .aircraft-action-buttons button {
   border: 1px solid rgba(174, 182, 198, 0.22);
   border-radius: 8px;
@@ -124,13 +126,13 @@ body,
   cursor: pointer;
   font: 11px "JetBrains Mono", ui-monospace, monospace;
 }
-
 .aircraft-action-buttons button.primary {
   border-color: rgba(155, 126, 207, 0.65);
   background: rgba(155, 126, 207, 0.18);
   color: #eee8ff;
 }
 
+/* ── Follow mode ─────────────────────────────────────────────────────────── */
 .follow-reticle {
   position: fixed;
   z-index: 5;
@@ -144,28 +146,24 @@ body,
   pointer-events: none;
   box-shadow: 0 0 24px rgba(155, 126, 207, 0.16);
 }
-
 .follow-reticle::before,
 .follow-reticle::after {
   content: "";
   position: absolute;
   background: rgba(155, 126, 207, 0.55);
 }
-
 .follow-reticle::before {
   left: 50%;
   top: -10px;
   width: 1px;
   height: 94px;
 }
-
 .follow-reticle::after {
   left: -10px;
   top: 50%;
   width: 94px;
   height: 1px;
 }
-
 .follow-status {
   position: fixed;
   z-index: 5;
@@ -180,7 +178,6 @@ body,
   pointer-events: none;
   font: 11px "JetBrains Mono", ui-monospace, monospace;
 }
-
 .follow-status span {
   margin-right: 8px;
   color: #9b7ecf;
