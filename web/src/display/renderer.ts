@@ -34,7 +34,10 @@ const RENDER_DELAY_MS = 1150;
 
 interface Sample {
   t: number; // performance.now() at arrival
-  m: Meters;
+  /** Absolute geographic position — stored as lat/lon so trails survive
+   *  center changes (pan commits). Reprojected to meters during draw. */
+  lat: number;
+  lon: number;
   track?: number;
   gs?: number;
 }
@@ -173,6 +176,10 @@ export class Renderer {
   private followVelocity: Meters = { east: 0, north: 0 };
   private activeFollowHex = "";
   private visibleHits: AircraftHit[] = [];
+  /** Tracks the last committed center so we can detect pan commits and
+   *  invalidate smoothed renderedM positions on all tracks. */
+  private lastCenterLat = NaN;
+  private lastCenterLon = NaN;
 
   // ── Pan / explore mode ──────────────────────────────────────────────────────
   /** Extra camera offset set by the drag-to-pan gesture (meters, config coords). */
@@ -338,9 +345,6 @@ export class Renderer {
       const hex = ac.hex.toLowerCase();
       seenHexes.add(hex);
       const hasPos = ac.lat != null && ac.lon != null;
-      const m = hasPos
-        ? llToMeters(ac.lat!, ac.lon!, cfg.centerLat, cfg.centerLon)
-        : { east: 0, north: 0 };
       let tr = this.tracks.get(hex);
       if (!tr) {
         tr = {
@@ -363,8 +367,8 @@ export class Renderer {
       if (hasPos) {
         const last = tr.history.last();
         // Dedup identical fixes (source sometimes repeats a position).
-        if (!last || last.m.east !== m.east || last.m.north !== m.north) {
-          tr.history.push({ t: now, m, track: ac.track, gs: ac.gs });
+        if (!last || last.lat !== ac.lat || last.lon !== ac.lon) {
+          tr.history.push({ t: now, lat: ac.lat!, lon: ac.lon!, track: ac.track, gs: ac.gs });
           const keep = Math.max(cfg.trailSeconds, 6) * 1000 + 4000;
           let trim = 0;
           while (trim < tr.history.length - 2 && now - tr.history.at(trim).t > keep) trim++;
@@ -394,30 +398,38 @@ export class Renderer {
     return true;
   }
 
-  /** Interpolate a track's position at render time `tt` (perf clock). */
+  /** Interpolate a track's position at render time `tt` (perf clock).
+   *  Returns meters relative to the current config center, reprojected
+   *  fresh each call so pan commits never corrupt trail history. */
   private sampleAt(tr: Track, tt: number, cfg: Config): Meters | null {
     const h = tr.history;
     if (h.length === 0) return null;
-    if (tt <= h.at(0).t) return h.at(0).m;
+
+    // Helper: sample → meters relative to current center.
+    const toM = (s: Sample): Meters =>
+      llToMeters(s.lat, s.lon, cfg.centerLat, cfg.centerLon);
+
+    if (tt <= h.at(0).t) return toM(h.at(0));
     const lastS = h.at(h.length - 1);
     if (tt >= lastS.t) {
       // Beyond newest fix — extrapolate gently, capped.
       const dt = Math.min((tt - lastS.t) / 1000, cfg.maxExtrapolationSec);
-      return cfg.interpolate ? deadReckon(lastS.m, lastS.track, lastS.gs, dt) : lastS.m;
+      const m = toM(lastS);
+      return cfg.interpolate ? deadReckon(m, lastS.track, lastS.gs, dt) : m;
     }
-    // Find the bracketing pair.
+    // Find the bracketing pair and interpolate.
     for (let i = h.length - 1; i > 0; i--) {
       if (h.at(i - 1).t <= tt && tt <= h.at(i).t) {
-        const a = h.at(i - 1);
-        const b = h.at(i);
-        const f = (tt - a.t) / Math.max(1, b.t - a.t);
+        const a = toM(h.at(i - 1));
+        const b = toM(h.at(i));
+        const f = (tt - h.at(i - 1).t) / Math.max(1, h.at(i).t - h.at(i - 1).t);
         return {
-          east: a.m.east + (b.m.east - a.m.east) * f,
-          north: a.m.north + (b.m.north - a.m.north) * f,
+          east:  a.east  + (b.east  - a.east)  * f,
+          north: a.north + (b.north - a.north) * f,
         };
       }
     }
-    return lastS.m;
+    return toM(lastS);
   }
 
   private draw(): void {
@@ -427,6 +439,14 @@ export class Renderer {
     const frameDt = this.prevFrame ? (now - this.prevFrame) / 1000 : 0.016;
     this.prevFrame = now;
     this.frameT = now / 1000;
+
+    // Detect pan commits: when centerLat/Lon changes, flush all smoothed
+    // renderedM values so trails and positions rebase to the new center cleanly.
+    if (cfg.centerLat !== this.lastCenterLat || cfg.centerLon !== this.lastCenterLon) {
+      for (const tr of this.tracks.values()) tr.renderedM = undefined;
+      this.lastCenterLat = cfg.centerLat;
+      this.lastCenterLon = cfg.centerLon;
+    }
 
     if (this.canvas.clientWidth !== this.w || this.canvas.clientHeight !== this.h) {
       this.resize();
@@ -1226,7 +1246,9 @@ export class Renderer {
     const pts: { p: Point; age: number }[] = [];
     for (const s of h) {
       if (s.t < tt - windowMs || s.t > tt) continue;
-      pts.push({ p: project(this.relativeToFollow(s.m), proj), age: (tt - s.t) / windowMs });
+      // Reproject from absolute lat/lon to current center — trail survives pans.
+      const m = llToMeters(s.lat, s.lon, cfg.centerLat, cfg.centerLon);
+      pts.push({ p: project(this.relativeToFollow(m), proj), age: (tt - s.t) / windowMs });
     }
     pts.push({ p: v.p, age: 0 });
     if (pts.length < 2) return;

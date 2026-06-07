@@ -349,30 +349,30 @@ export function Display() {
           setSelectedHit(null);
           break;
         case "r":
-          conn.patchConfig({ rotationDeg: (c.rotationDeg + 5) % 360 });
+          connRef.current.patchConfig({ rotationDeg: (c.rotationDeg + 5) % 360 });
           break;
         case "R":
-          conn.patchConfig({ rotationDeg: (c.rotationDeg - 5 + 360) % 360 });
+          connRef.current.patchConfig({ rotationDeg: (c.rotationDeg - 5 + 360) % 360 });
           break;
         case "m":
-          conn.patchConfig({ mirrorX: !c.mirrorX });
+          connRef.current.patchConfig({ mirrorX: !c.mirrorX });
           break;
         case "M":
-          conn.patchConfig({ mirrorY: !c.mirrorY });
+          connRef.current.patchConfig({ mirrorY: !c.mirrorY });
           break;
         case "t": {
           const next = THEMES[(THEMES.indexOf(c.theme) + 1) % THEMES.length];
-          conn.patchConfig({ theme: next });
+          connRef.current.patchConfig({ theme: next });
           break;
         }
         case "[":
-          conn.patchConfig({ radiusMiles: Math.max(0.5, c.radiusMiles - 0.5) });
+          connRef.current.patchConfig({ radiusMiles: Math.max(0.5, c.radiusMiles - 0.5) });
           break;
         case "]":
-          conn.patchConfig({ radiusMiles: c.radiusMiles + 0.5 });
+          connRef.current.patchConfig({ radiusMiles: c.radiusMiles + 0.5 });
           break;
         case "h":
-          conn.patchConfig({ showHud: !c.showHud });
+          connRef.current.patchConfig({ showHud: !c.showHud });
           break;
       }
     };

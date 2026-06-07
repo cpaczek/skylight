@@ -38,13 +38,14 @@ export function metersToMiles(m: number): number {
   return m / M_PER_MILE;
 }
 
-/** Pixels per meter so that `radiusMiles` fills half of the smaller screen axis. */
+/** Pixels per meter so that `radiusMiles` fills half of the larger screen axis,
+ *  ensuring the view covers the full screen in both width and height. */
 export function pxPerMeter(
   screenW: number,
   screenH: number,
   radiusMiles: number,
 ): number {
-  return Math.min(screenW, screenH) / 2 / (radiusMiles * M_PER_MILE);
+  return Math.max(screenW, screenH) / 2 / (radiusMiles * M_PER_MILE);
 }
 
 export interface ProjectOpts {
