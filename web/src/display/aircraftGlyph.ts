@@ -7,6 +7,7 @@ import type { Aircraft } from "@shared/index.js";
 
 export type GlyphKind =
   | "light"
+  | "glider"
   | "turboprop"
   | "airliner"
   | "widebody"
@@ -16,6 +17,7 @@ export type GlyphKind =
 // Relative size per kind (multiplies the configured glyph size).
 export const GLYPH_SCALE: Record<GlyphKind, number> = {
   light: 0.62,
+  glider: 0.58,
   turboprop: 0.86,
   airliner: 1.0,
   widebody: 1.3,
@@ -46,6 +48,12 @@ const TPROP = new Set([
   "D328", "F50", "F27", "ATP", "TBM7", "TBM8", "TBM9", "TBM0", "PC6", "C441",
   "C425", "DHC6", "DHC7", "C130", "AN12", "AN26", "AN32", "SH36", "CVLT", "SAAB",
 ]);
+const GLIDER = new Set([
+  "DISC", "DUOD", "VENT", "NIMB", "NIM3", "NIM4", "JANS", "ARCE", "DG40", "DG80",
+  "DG1T", "DG30", "DG50", "LS3", "LS4", "LS6", "LS7", "LS8", "STD3", "G103",
+  "G102", "G104", "PW5", "PW6", "L13", "L23", "L33", "PIK", "PEGA", "KEST",
+  "TWIN", "AS33", "ASW", "ASG", "ASK", "VENS", "GLID", "MOSQ", "DIMO",
+]);
 const LIGHT = new Set([
   "C150", "C152", "C162", "C172", "C72R", "C175", "C177", "C180", "C182", "C185",
   "C188", "C206", "C207", "C210", "C310", "C337", "SR20", "SR22", "S22T", "PA18",
@@ -62,6 +70,7 @@ export function classifyGlyph(ac: Aircraft): GlyphKind {
   if (QUAD.has(code)) return "quadjet";
   if (WIDE.has(code) || cat === "A5") return "widebody";
   if (TPROP.has(code)) return "turboprop";
+  if (GLIDER.has(code) || cat === "B1") return "glider";
   if (LIGHT.has(code) || cat === "A1") return "light";
   return "airliner";
 }
@@ -113,6 +122,12 @@ export function drawAircraftGlyph(
       ctx.shadowBlur = 0;
       // Single nose prop, spinning.
       propDisc(ctx, 0, -0.95 * s, 0.34 * s, color, alpha, t * 11 + seed);
+      break;
+    case "glider":
+      gliderBody(ctx, s);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      core(ctx, s, alpha, 0.07);
       break;
     case "helicopter":
       heliBody(ctx, s);
@@ -209,6 +224,33 @@ function lightBody(ctx: CanvasRenderingContext2D, s: number): void {
   ctx.lineTo(0.42 * s, 0.88 * s);
   ctx.lineTo(0.42 * s, 0.78 * s);
   ctx.lineTo(0.09 * s, 0.6 * s);
+  ctx.closePath();
+}
+
+/** Sailplane: slender fuselage + very long, thin, high-aspect-ratio wings + T-tail. */
+function gliderBody(ctx: CanvasRenderingContext2D, s: number): void {
+  ctx.beginPath();
+  // Slender fuselage, pointed nose.
+  ctx.roundRect(-0.07 * s, -0.92 * s, 0.14 * s, 1.7 * s, 0.07 * s);
+  // Long, thin, near-straight wings (high aspect ratio).
+  ctx.moveTo(-0.06 * s, -0.18 * s);
+  ctx.lineTo(-1.55 * s, -0.02 * s);
+  ctx.lineTo(-1.55 * s, 0.05 * s);
+  ctx.lineTo(-0.06 * s, 0.02 * s);
+  ctx.lineTo(0.06 * s, 0.02 * s);
+  ctx.lineTo(1.55 * s, 0.05 * s);
+  ctx.lineTo(1.55 * s, -0.02 * s);
+  ctx.lineTo(0.06 * s, -0.18 * s);
+  ctx.closePath();
+  // T-tail: horizontal stabilizer carried high at the tail.
+  ctx.moveTo(-0.06 * s, 0.66 * s);
+  ctx.lineTo(-0.38 * s, 0.72 * s);
+  ctx.lineTo(-0.38 * s, 0.8 * s);
+  ctx.lineTo(-0.06 * s, 0.76 * s);
+  ctx.lineTo(0.06 * s, 0.76 * s);
+  ctx.lineTo(0.38 * s, 0.8 * s);
+  ctx.lineTo(0.38 * s, 0.72 * s);
+  ctx.lineTo(0.06 * s, 0.66 * s);
   ctx.closePath();
 }
 
