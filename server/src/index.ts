@@ -133,6 +133,48 @@ async function main(): Promise<void> {
   app.post("/api/config/reset", (_req, res) => res.json(store.reset()));
   app.get("/api/aircraft", (_req, res) => res.json(poller.getSnapshot()));
   app.get("/api/status", (_req, res) => res.json(poller.getStatus()));
+app.post("/api/import-airport", async (req, res) => {
+  const code = String(req.body?.code ?? "").trim().toUpperCase();
+
+  if (!/^[A-Z0-9]{3,5}$/.test(code)) {
+    return res.status(400).json({ error: "Airport code must look like KSNA, KCNO, KFUL, etc." });
+  }
+
+  try {
+    const { execFileSync } = await import("node:child_process");
+
+    execFileSync("node", ["tools/import-airport.cjs", code], {
+      cwd: resolve(__dirname, "../.."),
+      stdio: "inherit",
+    });
+
+    execFileSync("pnpm", ["build"], {
+      cwd: resolve(__dirname, "../.."),
+      stdio: "inherit",
+    });
+
+    res.json({
+      ok: true,
+      code,
+      message: `Imported ${code}. Restarting Skylight server now. Refresh the display after a few seconds.`,
+    });
+
+    setTimeout(() => {
+      try {
+        execFileSync("sudo", ["-n", "systemctl", "restart", "skylight-server"], {
+          stdio: "ignore",
+        });
+      } catch {
+        // server may die during restart; ignore here
+      }
+    }, 1000);
+  } catch (err) {
+    res.status(500).json({
+      error: err instanceof Error ? err.message : String(err),
+    });
+  }
+});
+
   app.get("/api/tle", async (_req, res) => res.json(await tleStore.get()));
   app.post("/api/source", (req, res) => {
     const s = req.body?.source;
@@ -169,6 +211,37 @@ async function main(): Promise<void> {
         .send("Web build not found. Run `npm run build`, or use the Vite dev server."),
     );
   }
+
+app.get("/api/reload-version", async (_req, res) => {
+  try {
+    const fs = await import("node:fs");
+    const path = await import("node:path");
+
+    const reloadPath = path.resolve(
+      process.cwd(),
+      "data/reload.json"
+    );
+
+    console.log("Reload endpoint reading:", reloadPath);
+
+    if (!fs.existsSync(reloadPath)) {
+      return res.json({
+        error: "file not found",
+        path: reloadPath,
+      });
+    }
+
+    const data = JSON.parse(
+      fs.readFileSync(reloadPath, "utf8")
+    );
+
+    res.json(data);
+  } catch (err) {
+    res.json({
+      error: String(err),
+    });
+  }
+});
 
   poller.start();
 
