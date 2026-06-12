@@ -38,9 +38,19 @@ describe("geoAvailability", () => {
     ).toEqual({ ok: true });
   });
 
-  it("reports unsupported devices before checking context security", () => {
+  it("blocks insecure LAN hosts even when browsers hide the API", () => {
     expect(
       geoAvailability({ hasGeolocation: false, isSecureContext: false, hostname: "192.168.1.25" }),
+    ).toEqual({
+      ok: false,
+      reason: "insecure-context",
+      message: GEO_INSECURE_CONTEXT_MESSAGE,
+    });
+  });
+
+  it("reports unsupported devices in secure contexts", () => {
+    expect(
+      geoAvailability({ hasGeolocation: false, isSecureContext: true, hostname: "skylight.local" }),
     ).toEqual({
       ok: false,
       reason: "unsupported",

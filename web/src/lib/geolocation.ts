@@ -33,11 +33,11 @@ export function geoAvailability({
   isSecureContext,
   hostname,
 }: GeoAvailabilityInput): GeoAvailability {
-  if (!hasGeolocation) {
-    return { ok: false, reason: "unsupported", message: GEO_UNSUPPORTED_MESSAGE };
-  }
   if (!isSecureContext && !isLocalHostname(hostname)) {
     return { ok: false, reason: "insecure-context", message: GEO_INSECURE_CONTEXT_MESSAGE };
+  }
+  if (!hasGeolocation) {
+    return { ok: false, reason: "unsupported", message: GEO_UNSUPPORTED_MESSAGE };
   }
   return { ok: true };
 }
