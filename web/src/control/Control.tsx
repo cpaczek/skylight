@@ -35,6 +35,9 @@ export function Control() {
   // Location editor (Nominatim via the server's /api/geocode).
   const [geoBusy, setGeoBusy] = useState(false);
   const [geoErr, setGeoErr] = useState<string | null>(null);
+  const [airportImportCode, setAirportImportCode] = useState("");
+  const [airportImportBusy, setAirportImportBusy] = useState(false);
+  const [airportImportMsg, setAirportImportMsg] = useState<string | null>(null);
 
   // Airport runway import (OurAirports via the server's /api/airport).
   const [apBusy, setApBusy] = useState(false);
@@ -87,6 +90,39 @@ export function Control() {
       setGeoErr("Lookup failed");
     } finally {
       setGeoBusy(false);
+    }
+  };
+
+  const importAirportRunways = async () => {
+    const code = airportImportCode.trim().toUpperCase();
+    if (!code) {
+      setAirportImportMsg("Enter an airport code first, like KSNA or KCNO.");
+      return;
+    }
+
+    setAirportImportBusy(true);
+    setAirportImportMsg(`Importing ${code} runways…`);
+
+    try {
+      const r = await fetch("/api/import-airport", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code }),
+      });
+
+      const data = await r.json().catch(() => ({}));
+
+      if (!r.ok) {
+        setAirportImportMsg(data.error || `Import failed for ${code}`);
+        return;
+      }
+
+      setAirportImportMsg(`Imported ${code}. Refreshing display shortly…`);
+      setTimeout(() => window.location.reload(), 5000);
+    } catch {
+      setAirportImportMsg("Import failed. Check Skylight server logs.");
+    } finally {
+      setAirportImportBusy(false);
     }
   };
 
@@ -209,6 +245,26 @@ export function Control() {
               </button>
             </div>
           </Row>
+          <Row label="Runway overlay" hint="imports runway geometry from OurAirports">
+            <div className="loc-bar">
+              <input
+                className="text-input"
+                value={airportImportCode}
+                placeholder="KSNA, KCNO, KFUL..."
+                aria-label="Airport runway import code"
+                onChange={(e) => setAirportImportCode(e.target.value.toUpperCase())}
+              />
+              <button
+                type="button"
+                className="loc-btn"
+                disabled={airportImportBusy}
+                onClick={importAirportRunways}
+              >
+                {airportImportBusy ? "Importing…" : "Import"}
+              </button>
+            </div>
+          </Row>
+          {airportImportMsg && <Row label="" hint={airportImportMsg}><span /></Row>}
           {geoBusy && <Row label="" hint="resolving…"><span /></Row>}
           {geoErr && <Row label="" hint={geoErr}><span /></Row>}
           <div className="chips">
