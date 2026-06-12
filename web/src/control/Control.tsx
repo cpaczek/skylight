@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { Airport, Config, ShowFields, LocationProfile } from "@shared/index.js";
 import { formatLatLon } from "@shared/geo.js";
+import { geoAvailability, geoErrorMessage } from "../lib/geolocation.js";
 import { useStream } from "../lib/useStream.js";
 import { nextISSPass, type Tle } from "../display/celestial.js";
 import { ColorRow, Row, Section, Segmented, Slider, TextInput, Toggle } from "./components.js";
@@ -146,8 +147,13 @@ export function Control() {
     });
 
   const useCurrentLocation = () => {
-    if (!navigator.geolocation) {
-      setGeoErr("Geolocation not supported on this device");
+    const availability = geoAvailability({
+      hasGeolocation: Boolean(navigator.geolocation),
+      isSecureContext: window.isSecureContext,
+      hostname: window.location.hostname,
+    });
+    if (!availability.ok) {
+      setGeoErr(availability.message);
       return;
     }
     setGeoBusy(true);
@@ -163,13 +169,13 @@ export function Control() {
       },
       (err) => {
         setGeoBusy(false);
-        const msg =
-          err.code === err.PERMISSION_DENIED
-            ? "Location permission denied"
-            : err.code === err.TIMEOUT
-              ? "Location request timed out"
-              : "Location unavailable";
-        setGeoErr(msg);
+        const insecureContext =
+          !geoAvailability({
+            hasGeolocation: true,
+            isSecureContext: window.isSecureContext,
+            hostname: window.location.hostname,
+          }).ok;
+        setGeoErr(geoErrorMessage(err.code, insecureContext));
       },
       { enableHighAccuracy: true, timeout: 15000, maximumAge: 60_000 },
     );
