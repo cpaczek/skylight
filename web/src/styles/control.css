@@ -166,11 +166,35 @@ main {
   height: 28px;
 }
 .slider-value {
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-end;
+  min-width: 62px;
+}
+.slider-value,
+.slider-value input[type="number"] {
   font-family: var(--mono);
   font-size: 13px;
   color: var(--text);
-  min-width: 52px;
   text-align: right;
+}
+
+.slider-value input[type="number"] {
+  padding: 2px;
+  background: transparent;
+  border: 1px solid transparent;
+
+  &:focus {
+    border: 1px solid var(--accent);
+    border-radius: 6px;
+    outline: none;
+  }
+
+  &::-webkit-inner-spin-button,
+  &::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
 }
 
 /* Saved location profiles */

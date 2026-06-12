@@ -62,7 +62,14 @@ export function Slider({
         onChange={(e) => onChange(Number(e.target.value))}
       />
       <span className="slider-value">
-        {Number.isInteger(step) ? value : value.toFixed(2)}
+        <input
+          type="number"
+          min={min}
+          max={max}
+          step={step}
+          value={value}
+          onChange={(e) => onChange(Number(e.target.value))}
+        />
         {unit}
       </span>
     </div>
