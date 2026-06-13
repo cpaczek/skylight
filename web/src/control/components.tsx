@@ -11,9 +11,9 @@ export function Section({ title, children }: { title: string; children: ReactNod
   );
 }
 
-export function Row({ label, children, hint }: { label: string; children: ReactNode; hint?: string }) {
+export function Row({ label, children, hint, indent = false }: { label: string; children: ReactNode; hint?: string; indent?: boolean }) {
   return (
-    <div className="row">
+    <div className={`row ${indent ? "row-indent" : ""}`}>
       <div className="row-label">
         {label}
         {hint && <span className="row-hint">{hint}</span>}

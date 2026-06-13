@@ -426,6 +426,18 @@ export function Control() {
           <Row label="Stars">
             <Toggle value={cfg.showStars} onChange={(v) => set({ showStars: v })} />
           </Row>
+          {cfg.showStars && (
+            <>
+              <Row label="Star density" indent={true}>
+                <Slider value={cfg.starMagLimit} min={1} max={4} step={0.1}
+                  onChange={(v) => set({ starMagLimit: v })} />
+              </Row>
+              <Row label="Star labels" hint="higher = more names" indent={true}>
+                <Slider value={cfg.starLabelMagLimit} min={0} max={3} step={0.1}
+                  onChange={(v) => set({ starLabelMagLimit: v })} />
+              </Row>
+            </>
+          )}
           <Row label="Sun">
             <Toggle value={cfg.showSun} onChange={(v) => set({ showSun: v })} />
           </Row>
@@ -442,14 +454,6 @@ export function Control() {
           )}
           <Row label="Planets" hint="Venus, Jupiter, Mars…">
             <Toggle value={cfg.showPlanets} onChange={(v) => set({ showPlanets: v })} />
-          </Row>
-          <Row label="Star density">
-            <Slider value={cfg.starMagLimit} min={1} max={4} step={0.1}
-              onChange={(v) => set({ starMagLimit: v })} />
-          </Row>
-          <Row label="Star labels" hint="higher = more names">
-            <Slider value={cfg.starLabelMagLimit} min={0} max={3} step={0.1}
-              onChange={(v) => set({ starLabelMagLimit: v })} />
           </Row>
           <Row label="Sky time" hint={skyTimeLabel(cfg.skyTimeOffsetMin)}>
             <Slider value={cfg.skyTimeOffsetMin} min={-720} max={720} step={5} unit="m"

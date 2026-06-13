@@ -106,6 +106,9 @@ main {
   padding: 13px 14px;
   border-top: 1px solid var(--line);
 }
+.row-indent {
+  padding-left: 28px;
+}
 .row:first-child {
   border-top: none;
 }
