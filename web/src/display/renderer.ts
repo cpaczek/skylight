@@ -102,6 +102,38 @@ function altRamp(alt: number): [number, number, number] {
   return ALT_STOPS[ALT_STOPS.length - 1][1];
 }
 
+export function labelLines(cfg: Config, ac: Aircraft): { text: string; kind: "title" | "sub" }[] {
+  const f = cfg.showFields;
+  const out: { text: string; kind: "title" | "sub" }[] = [];
+  const title = f.flight ? ac.flight ?? ac.hex.toUpperCase() : ac.airline;
+  if (title) out.push({ text: title, kind: "title" });
+
+  const sub: string[] = [];
+  if (f.type && (ac.typeName || ac.typeCode)) sub.push(ac.typeName ?? ac.typeCode!);
+  const alt = ac.altBaro ?? ac.altGeom;
+  if (f.altitude) {
+    if (ac.onGround) sub.push("GND");
+    else if (alt != null) sub.push(`${alt.toLocaleString("en-US")} ft`);
+  }
+  if (f.speed && ac.gs != null) sub.push(formatSpeed(ac.gs, cfg.speedUnit));
+  if (sub.length) out.push({ text: sub.join("   "), kind: "sub" });
+
+  if (f.destination && ac.destination && routePlausible(ac, cfg)) {
+    const head = ac.origin ? `${ac.origin} → ${ac.destination}` : `→ ${ac.destination}`;
+    out.push({ text: ac.destName ? `${head}   ${ac.destName}` : head, kind: "sub" });
+    if (cfg.showRouteDetail && ac.destLat != null && ac.destLon != null) {
+      const bits: string[] = [`${localTimeAt(ac.destLat, ac.destLon)} local`];
+      if (ac.lat != null && ac.lon != null) {
+        const mi = Math.round(greatCircleMiles(ac.lat, ac.lon, ac.destLat, ac.destLon));
+        if (mi > 1) bits.push(`${mi.toLocaleString("en-US")} mi to go`);
+      }
+      out.push({ text: bits.join("   ·   "), kind: "sub" });
+    }
+  }
+  if (f.registration && ac.registration) out.push({ text: ac.registration, kind: "sub" });
+  return out;
+}
+
 const rgba = (c: [number, number, number], a: number) =>
   `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${a})`;
 
@@ -966,41 +998,9 @@ export class Renderer {
     return false;
   }
 
-  private labelLines(cfg: Config, ac: Aircraft): { text: string; kind: "title" | "sub" }[] {
-    const f = cfg.showFields;
-    const out: { text: string; kind: "title" | "sub" }[] = [];
-    const title = f.flight ? ac.flight ?? ac.hex.toUpperCase() : ac.airline;
-    if (title) out.push({ text: title, kind: "title" });
-
-    const sub: string[] = [];
-    if (f.type && (ac.typeName || ac.typeCode)) sub.push(ac.typeName ?? ac.typeCode!);
-    const alt = ac.altBaro ?? ac.altGeom;
-    if (f.altitude) {
-      if (ac.onGround) sub.push("GND");
-      else if (alt != null) sub.push(`${alt.toLocaleString("en-US")} ft`);
-    }
-    if (f.speed && ac.gs != null) sub.push(formatSpeed(ac.gs, cfg.speedUnit));
-    if (sub.length) out.push({ text: sub.join("   "), kind: "sub" });
-
-    if (f.destination && ac.destination && routePlausible(ac, cfg)) {
-      const head = ac.origin ? `${ac.origin} → ${ac.destination}` : `→ ${ac.destination}`;
-      out.push({ text: ac.destName ? `${head}   ${ac.destName}` : head, kind: "sub" });
-      if (cfg.showRouteDetail && ac.destLat != null && ac.destLon != null) {
-        const bits: string[] = [`${localTimeAt(ac.destLat, ac.destLon)} local`];
-        if (ac.lat != null && ac.lon != null) {
-          const mi = Math.round(greatCircleMiles(ac.lat, ac.lon, ac.destLat, ac.destLon));
-          if (mi > 1) bits.push(`${mi.toLocaleString("en-US")} mi to go`);
-        }
-        out.push({ text: bits.join("   ·   "), kind: "sub" });
-      }
-    }
-    if (f.registration && ac.registration) out.push({ text: ac.registration, kind: "sub" });
-    return out;
-  }
-
   private drawLabel(cfg: Config, v: Visible, strength: number): void {
     const ctx = this.ctx;
-    const lines = this.labelLines(cfg, v.tr.ac);
+    const lines = labelLines(cfg, v.tr.ac);
     if (!lines.length) return;
     const a = v.alpha * strength;
     if (a < 0.04) return;
