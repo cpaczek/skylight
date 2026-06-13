@@ -106,6 +106,9 @@ main {
   padding: 13px 14px;
   border-top: 1px solid var(--line);
 }
+.row-indent {
+  padding-left: 28px;
+}
 .row:first-child {
   border-top: none;
 }
@@ -166,11 +169,35 @@ main {
   height: 28px;
 }
 .slider-value {
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-end;
+  min-width: 62px;
+}
+.slider-value,
+.slider-value input[type="number"] {
   font-family: var(--mono);
   font-size: 13px;
   color: var(--text);
-  min-width: 52px;
   text-align: right;
+}
+
+.slider-value input[type="number"] {
+  padding: 2px;
+  background: transparent;
+  border: 1px solid transparent;
+
+  &:focus {
+    border: 1px solid var(--accent);
+    border-radius: 6px;
+    outline: none;
+  }
+
+  &::-webkit-inner-spin-button,
+  &::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
 }
 
 /* Saved location profiles */
@@ -298,6 +325,55 @@ main {
   border-color: var(--accent);
   color: var(--text);
   background: color-mix(in srgb, var(--accent) 22%, var(--panel-2));
+}
+
+/* Plane detail preview */
+.plane-preview {
+  display: flex;
+  flex-direction: column;
+  padding: 13px 14px;
+  gap: 10px;
+  border-top: 1px solid var(--line);
+}
+.plane-preview .chips {
+  border-top: 0;
+  padding: 0 0 7px 0;
+}
+.plane-preview .row {
+  padding-left: 0;
+  padding-right: 0;
+}
+.plane-preview-title {
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 8px 0;
+}
+.plane-preview-card {
+  display: flex;
+  flex-direction: column;
+  padding: 13px 14px;
+  gap: 5px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--bg);
+}
+.plane-preview-card-row {
+  display: flex;
+  gap: 14px;
+}
+.plane-preview-card-row-title {
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 1.5px;
+  color: #f5f7ff;
+}
+.plane-preview-card-row-sub {
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0.5px;
+  color: rgba(174, 182, 198, 1);
 }
 
 /* Palette */

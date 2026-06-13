@@ -3,6 +3,7 @@ import type { Airport, Config, ShowFields, LocationProfile } from "@shared/index
 import { formatLatLon } from "@shared/geo.js";
 import { useStream } from "../lib/useStream.js";
 import { nextISSPass, type Tle } from "../display/celestial.js";
+import { labelLines } from "../display/renderer.js";
 import { ColorRow, Row, Section, Segmented, Slider, TextInput, Toggle } from "./components.js";
 
 function skyTimeLabel(offsetMin: number): string {
@@ -18,13 +19,12 @@ function fmtIn(ms: number): string {
 }
 
 const FIELD_LABELS: Record<keyof ShowFields, string> = {
-  airline: "Airline",
-  flight: "Flight",
+  name: "Name",
   type: "Type",
   altitude: "Altitude",
   speed: "Speed",
   verticalRate: "Vert. rate",
-  destination: "Destination",
+  destination: "Departing / Arriving",
   registration: "Registration",
 };
 
@@ -174,6 +174,34 @@ export function Control() {
       { enableHighAccuracy: true, timeout: 15000, maximumAge: 60_000 },
     );
   };
+
+  // plane preview card
+  const planePreview = labelLines(
+    cfg,
+    {
+      "hex": "4cad7b",
+      "flight": "BA001",
+      "lat": 52.4841701,
+      "lon": -1.9037858,
+      "altBaro": 60000,
+      "altGeom": 24325,
+      "gs": 1173.118,
+      "track": 155.18,
+      "baroRate": -1536,
+      "registration": "G-BOAA",
+      "typeCode": "CONC",
+      "typeName": "Concorde",
+      "airline": "British Airways",
+      "origin": "JFK",
+      "destination": "LHR",
+      "originName": "New York",
+      "destName": "London",
+      "originLat": 40.641766,
+      "originLon": -73.780968,
+      "destLat": 51.4706,
+      "destLon": -0.461941
+    },
+  );
 
   return (
     <div className="control">
@@ -357,14 +385,57 @@ export function Control() {
               ]}
               onChange={(v) => set({ speedUnit: v })} />
           </Row>
-          <div className="chips">
-            {(Object.keys(FIELD_LABELS) as (keyof ShowFields)[]).map((k) => (
-              <button key={k}
-                className={`chip ${cfg.showFields[k] ? "on" : ""}`}
-                onClick={() => setField(k, !cfg.showFields[k])}>
-                {FIELD_LABELS[k]}
-              </button>
-            ))}
+
+          <div className="plane-preview">
+            <h3 className="plane-preview-title">Plane detail</h3>
+            <div className="chips">
+              {(Object.keys(FIELD_LABELS) as (keyof ShowFields)[]).map((k) => (
+                <button key={k}
+                  className={`chip ${cfg.showFields[k] ? "on" : ""}`}
+                  onClick={() => setField(k, !cfg.showFields[k])}>
+                  {FIELD_LABELS[k]}
+                </button>
+              ))}
+            </div>
+
+            <Row label="Name display">
+              <Segmented value={cfg.nameDisplay}
+                 options={[
+                   { value: "airline", label: "Airline" },
+                   { value: "flight", label: "Flight number" },
+                 ]}
+                 onChange={(v) => set({ nameDisplay: v })} />
+            </Row>
+
+            <Row label="Departing / Arriving display">
+              <Segmented value={cfg.locationDisplay}
+                options={[
+                  { value: "name", label: "Name" },
+                  { value: "iata", label: "IATA" },
+                ]}
+                onChange={(v) => set({ locationDisplay: v })} />
+            </Row>
+
+            <h3 className="plane-preview-title">Preview</h3>
+            <div className="plane-preview-card">
+              {
+                planePreview.map(
+                  (row, index) => {
+                    const text = row?.text?.split(/\s{2,}/);
+
+                    if (!text) {
+                      return null;
+                    }
+
+                    return (
+                      <div key={`plane-preview-row-${index}`} className={`plane-preview-card-row plane-preview-card-row-${row?.kind}`}>
+                        {text.map((t) => (<span key={t}>{t}</span>))}
+                      </div>
+                    );
+                  }
+                )
+              }
+            </div>
           </div>
         </Section>
 
@@ -426,6 +497,18 @@ export function Control() {
           <Row label="Stars">
             <Toggle value={cfg.showStars} onChange={(v) => set({ showStars: v })} />
           </Row>
+          {cfg.showStars && (
+            <>
+              <Row label="Star density" indent={true}>
+                <Slider value={cfg.starMagLimit} min={1} max={4} step={0.1}
+                  onChange={(v) => set({ starMagLimit: v })} />
+              </Row>
+              <Row label="Star labels" hint="higher = more names" indent={true}>
+                <Slider value={cfg.starLabelMagLimit} min={0} max={3} step={0.1}
+                  onChange={(v) => set({ starLabelMagLimit: v })} />
+              </Row>
+            </>
+          )}
           <Row label="Sun">
             <Toggle value={cfg.showSun} onChange={(v) => set({ showSun: v })} />
           </Row>
@@ -442,14 +525,6 @@ export function Control() {
           )}
           <Row label="Planets" hint="Venus, Jupiter, Mars…">
             <Toggle value={cfg.showPlanets} onChange={(v) => set({ showPlanets: v })} />
-          </Row>
-          <Row label="Star density">
-            <Slider value={cfg.starMagLimit} min={1} max={4} step={0.1}
-              onChange={(v) => set({ starMagLimit: v })} />
-          </Row>
-          <Row label="Star labels" hint="higher = more names">
-            <Slider value={cfg.starLabelMagLimit} min={0} max={3} step={0.1}
-              onChange={(v) => set({ starLabelMagLimit: v })} />
           </Row>
           <Row label="Sky time" hint={skyTimeLabel(cfg.skyTimeOffsetMin)}>
             <Slider value={cfg.skyTimeOffsetMin} min={-720} max={720} step={5} unit="m"
