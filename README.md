@@ -355,3 +355,42 @@ RTL-SDR ──USB──> dump1090-fa ──> aircraft.json (:8080)
 ## License
 
 [MIT](LICENSE) - be excellent, point it at the sky.
+
+## Installation and Dependencies
+
+To get started with Skylight, ensure you have the following dependencies installed:
+
+- **Node.js**: Required to run the server and build the application. Make sure to use the latest LTS version.
+- **RTL-SDR**: A software-defined radio to receive ADS-B signals. Ensure you have the correct drivers installed for your operating system.
+- **Docker** (optional): If you prefer to run Skylight in a containerized environment, ensure Docker is installed and running.
+
+### Basic Installation Steps
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/cpaczek/skylight.git
+   cd skylight
+   ```
+2. Install dependencies:
+   ```bash
+   pnpm install
+   ```
+3. Set up the environment:
+   ```bash
+   cp .env.example .env
+   # Edit .env with your specific configurations
+   ```
+4. Start the application:
+   ```bash
+   pnpm dev
+   ```
+
+## Frequently Asked Questions (FAQ)
+
+### Q: What should I do if I don't see any planes?
+A: Ensure your RTL-SDR is properly connected and that the drivers are correctly installed. Check the control panel to verify that the data source is set to radio.
+
+### Q: How can I change the location settings?
+A: You can change the location settings from the control panel under the 'Location' section. You can enter your coordinates or search for a city or airport.
+
+### Q: Is it possible to run Skylight without a radio?
+A: Yes, you can run Skylight using the public API by setting `DATA_SOURCE=api` in your environment variables.
