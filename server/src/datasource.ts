@@ -83,7 +83,7 @@ function describeFetchError(e: unknown): string {
       return "connection reset";
   }
   if (code) return code;
-  return e.message || "fetch failed";
+  return e.message || `Fetch failed: ${reason}`;
 }
 
 /** Hold off the API after an HTTP 429 — hammering through a rate limit just
