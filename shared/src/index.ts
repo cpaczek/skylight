@@ -4,6 +4,7 @@ export * from "./format.js";
 export * from "./aircraft.js";
 export * from "./messages.js";
 export * from "./geo.js";
+export * from "./route.js";
 export * from "./camera.js";
 export * from "./aim.js";
 export * from "./tracker-messages.js";

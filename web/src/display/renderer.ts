@@ -31,6 +31,9 @@ import {
   skyGlyphScale,
   lerpAzimuth,
   EMERGENCY_SQUAWKS,
+  bearing,
+  greatCircleMiles,
+  routePlausible,
   type Aircraft,
   type Config,
   type GroundSample,
@@ -1162,28 +1165,6 @@ function hexSeed(hex: string): number {
   return (n / 360) * Math.PI * 2;
 }
 
-const DEG = Math.PI / 180;
-
-/** Initial great-circle bearing (deg from North) from point 1 to point 2. */
-function bearing(lat1: number, lon1: number, lat2: number, lon2: number): number {
-  const φ1 = lat1 * DEG;
-  const φ2 = lat2 * DEG;
-  const Δλ = (lon2 - lon1) * DEG;
-  const y = Math.sin(Δλ) * Math.cos(φ2);
-  const x = Math.cos(φ1) * Math.sin(φ2) - Math.sin(φ1) * Math.cos(φ2) * Math.cos(Δλ);
-  return (Math.atan2(y, x) / DEG + 360) % 360;
-}
-
-/** Great-circle distance in statute miles. */
-function greatCircleMiles(lat1: number, lon1: number, lat2: number, lon2: number): number {
-  const φ1 = lat1 * DEG;
-  const φ2 = lat2 * DEG;
-  const dφ = (lat2 - lat1) * DEG;
-  const dλ = (lon2 - lon1) * DEG;
-  const a = Math.sin(dφ / 2) ** 2 + Math.cos(φ1) * Math.cos(φ2) * Math.sin(dλ / 2) ** 2;
-  return 3958.8 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
-
 /** Civil local time at a place as HH:MM (real timezone incl. DST). Falls
  *  back to longitude-based mean solar time if the tz lookup fails — solar
  *  time can read ~an hour off the wall clock (#25). */
@@ -1205,64 +1186,6 @@ function localTimeAt(lat: number, lon: number): string {
     const mm = Math.floor(m % 60);
     return `${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}`;
   }
-}
-
-/** Cross-track distance (miles) of a point from the great circle p1→p2. */
-function crossTrackMiles(
-  lat: number, lon: number,
-  lat1: number, lon1: number,
-  lat2: number, lon2: number,
-): number {
-  const R = 3958.8;
-  const d13 = greatCircleMiles(lat1, lon1, lat, lon) / R; // angular (rad)
-  const θ13 = bearing(lat1, lon1, lat, lon) * DEG;
-  const θ12 = bearing(lat1, lon1, lat2, lon2) * DEG;
-  return Math.asin(Math.sin(d13) * Math.sin(θ13 - θ12)) * R;
-}
-
-/**
- * Is the adsbdb route consistent with where the plane actually is and what it's
- * doing? adsbdb returns the scheduled route for a callsign, which is sometimes
- * the wrong leg. We reject a route if:
- *  (a) it's geographically impossible — the plane is neither near an endpoint
- *      nor roughly on the great-circle path; or
- *  (b) the plane's vertical trend disagrees — a climbing plane near you just
- *      departed the local airport (so that should be the origin); a descending
- *      one is arriving (the destination).
- */
-function routePlausible(ac: Aircraft, cfg: Config): boolean {
-  if (ac.lat == null || ac.lon == null) return true;
-  const haveCoords = ac.originLat != null || ac.destLat != null;
-  if (!haveCoords) return true; // legacy cache without coords — don't hide
-
-  // (a) geographic consistency
-  const nearPlane = (la?: number, lo?: number) =>
-    la != null && lo != null && greatCircleMiles(ac.lat!, ac.lon!, la, lo) < 80;
-  let geomOk = nearPlane(ac.originLat, ac.originLon) || nearPlane(ac.destLat, ac.destLon);
-  if (
-    !geomOk &&
-    ac.originLat != null && ac.originLon != null &&
-    ac.destLat != null && ac.destLon != null
-  ) {
-    geomOk = Math.abs(crossTrackMiles(ac.lat, ac.lon, ac.originLat, ac.originLon, ac.destLat, ac.destLon)) < 130;
-  } else if (!geomOk && (ac.originLat == null || ac.destLat == null)) {
-    geomOk = true; // only one endpoint known and not near — can't judge, allow
-  }
-  if (!geomOk) return false;
-
-  // (b) vertical-trend consistency for low, nearby traffic
-  const alt = ac.altBaro ?? ac.altGeom;
-  const localTraffic = greatCircleMiles(ac.lat, ac.lon, cfg.centerLat, cfg.centerLon) < 30;
-  const localAirport = (la?: number, lo?: number) =>
-    la != null && lo != null && greatCircleMiles(cfg.centerLat, cfg.centerLon, la, lo) < 45;
-  if (localTraffic && alt != null && alt < 12000 && ac.baroRate != null && Math.abs(ac.baroRate) > 250) {
-    if (ac.baroRate > 0) {
-      if (ac.originLat != null && !localAirport(ac.originLat, ac.originLon)) return false; // departing
-    } else {
-      if (ac.destLat != null && !localAirport(ac.destLat, ac.destLon)) return false; // arriving
-    }
-  }
-  return true;
 }
 
 function hexToRgb(hex: string): [number, number, number] {
