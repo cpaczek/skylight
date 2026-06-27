@@ -14,10 +14,7 @@ import type {
   PanTilt,
 } from "./camera.js";
 
-const DEG = Math.PI / 180;
-const KT_TO_MS = 0.514444;
-export const FT_TO_M = 0.3048;
-export const MI_TO_M = 1609.34;
+import { DEG, KT_TO_MS, FT_TO_M } from "./constants.js";
 
 // WGS84 ellipsoid.
 const WGS84_A = 6378137.0;

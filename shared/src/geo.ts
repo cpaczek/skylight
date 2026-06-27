@@ -2,14 +2,7 @@
 
 import type { ProjectionMode } from "./config.js";
 
-const M_PER_MILE = 1609.34;
-
-/** Signed decimal degrees, e.g. `37.6213, -122.3790`. */
-export function formatLatLon(lat: number, lon: number): string {
-  return `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
-}
-const KT_TO_MS = 0.514444;
-const DEG = Math.PI / 180;
+import { DEG, FT_TO_M, KT_TO_MS, MI_TO_M } from "./constants.js";
 
 export interface Meters {
   east: number;
@@ -42,7 +35,7 @@ export function rangeMeters(m: Meters): number {
 }
 
 export function metersToMiles(m: number): number {
-  return m / M_PER_MILE;
+  return m / MI_TO_M;
 }
 
 /** Pixels per meter so that `radiusMiles` fills half of the smaller screen axis. */
@@ -51,7 +44,7 @@ export function pxPerMeter(
   screenH: number,
   radiusMiles: number,
 ): number {
-  return Math.min(screenW, screenH) / 2 / (radiusMiles * M_PER_MILE);
+  return Math.min(screenW, screenH) / 2 / (radiusMiles * MI_TO_M);
 }
 
 export interface ProjectOpts {
@@ -99,8 +92,6 @@ export function deadReckon(
 
 export const EMERGENCY_SQUAWKS = new Set(["7500", "7600", "7700"]);
 
-const FT_TO_M = 0.3048;
-
 /** Horizontal sky coordinates relative to the observer (zenith = center). */
 export interface SkyAngles {
   /** Degrees from true North, clockwise. */
@@ -121,7 +112,7 @@ export interface GroundSample {
 
 /** Horizon radius in meters (maps to the edge of the circular sky field). */
 export function horizonRadiusM(radiusMiles: number): number {
-  return radiusMiles * M_PER_MILE;
+  return radiusMiles * MI_TO_M;
 }
 
 /**

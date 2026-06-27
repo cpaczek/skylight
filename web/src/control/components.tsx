@@ -1,6 +1,7 @@
 // Small, touch-friendly control primitives for the phone settings panel.
 
 import { useEffect, useState, type ReactNode } from "react";
+import { round } from "@shared/index.js";
 
 export function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
@@ -37,6 +38,7 @@ export function Toggle({ value, onChange }: { value: boolean; onChange: (v: bool
 }
 
 export function Slider({
+  id,
   value,
   min,
   max,
@@ -44,6 +46,7 @@ export function Slider({
   unit = "",
   onChange,
 }: {
+  id: string;
   value: number;
   min: number;
   max: number;
@@ -51,24 +54,45 @@ export function Slider({
   unit?: string;
   onChange: (v: number) => void;
 }) {
+  // Keep the handle under the pointer while dragging; parent value may lag after unit conversion.
+  const [active, setActive] = useState(false);
+  const [local, setLocal] = useState(value);
+  useEffect(() => {
+    if (!active) setLocal(value);
+  }, [value, active]);
+
+  const display = active ? local : value;
+  const handleChange = (v: number) => {
+    setLocal(v);
+    onChange(v);
+  };
+  const release = () => setActive(false);
+
   return (
     <div className="slider">
       <input
+        id={`${id}-slider`}
         type="range"
         min={min}
         max={max}
         step={step}
-        value={value}
-        onChange={(e) => onChange(Number(e.target.value))}
+        value={display}
+        onPointerDown={() => setActive(true)}
+        onPointerUp={release}
+        onPointerCancel={release}
+        onChange={(e) => handleChange(Number(e.target.value))}
       />
       <span className="slider-value">
         <input
+          id={`${id}-number`}
           type="number"
           min={min}
           max={max}
           step={step}
-          value={value}
-          onChange={(e) => onChange(Number(e.target.value))}
+          value={round(display, step >= 1 ? 0 : 1)}
+          onFocus={() => setActive(true)}
+          onBlur={release}
+          onChange={(e) => handleChange(Number(e.target.value))}
         />
         {unit}
       </span>

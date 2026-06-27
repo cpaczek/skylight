@@ -1,5 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { convertSpeed, formatSpeed } from "../src/format.js";
+import { convertAltitude, convertAltitudeToFt, convertSpeed, formatSpeed } from "../src/format.js";
+
+describe("convertAltitude", () => {
+  it("round-trips feet through meters", () => {
+    expect(convertAltitudeToFt(convertAltitude(1000, "m"), "m")).toBeCloseTo(1000, 5);
+  });
+  it("passes feet through unchanged", () => {
+    expect(convertAltitude(500, "ft")).toBe(500);
+    expect(convertAltitudeToFt(500, "ft")).toBe(500);
+  });
+});
 
 describe("convertSpeed", () => {
   it("passes knots through unchanged", () => {

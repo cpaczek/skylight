@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import type { Config, Theme } from "@shared/index.js";
-import { DEFAULT_CONFIG } from "@shared/index.js";
+import { DEFAULT_CONFIG, formatDistance } from "@shared/index.js";
 import { useStream } from "../lib/useStream.js";
 import { useAmbientMode, kioskRequested } from "../lib/useAmbientMode.js";
 import { Renderer } from "./renderer.js";
@@ -98,7 +98,7 @@ export function Display() {
           <span>
             {state.status?.source ?? "—"} · {state.aircraft.length} ac ·{" "}
             rot {cfg.rotationDeg}° · mirror {cfg.mirrorX ? "X" : "–"}
-            {cfg.mirrorY ? "Y" : ""} · r {cfg.radiusMiles}mi · {cfg.projectionMode} · {cfg.theme}
+            {cfg.mirrorY ? "Y" : ""} · r {formatDistance(cfg.radiusMiles, cfg.distanceUnit)} · {cfg.projectionMode} · {cfg.theme}
           </span>
         </div>
       )}

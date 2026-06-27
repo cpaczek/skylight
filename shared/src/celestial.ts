@@ -5,6 +5,7 @@
 
 import * as AstronomyNS from "astronomy-engine";
 import * as satelliteNS from "satellite.js";
+import { DEG } from "./constants.js";
 import { STARS } from "./stars.js";
 
 // Both packages ship UMD/CJS bundles. Under some Node versions the ESM
@@ -15,7 +16,6 @@ const Astronomy: typeof AstronomyNS =
 const satellite: typeof satelliteNS =
   (satelliteNS as unknown as { default?: typeof satelliteNS }).default ?? satelliteNS;
 
-const D2R = Math.PI / 180;
 const R2D = 180 / Math.PI;
 
 export type SkyKind = "sun" | "moon" | "star" | "satellite" | "iss" | "planet";
@@ -70,10 +70,10 @@ function norm360(d: number): number {
 
 /** Horizontal coords of a fixed star from its RA/Dec and the local sidereal time. */
 function starAltAz(raDeg: number, decDeg: number, lstHours: number, latDeg: number) {
-  const ra = raDeg * D2R;
-  const dec = decDeg * D2R;
-  const lat = latDeg * D2R;
-  const H = (lstHours * 15) * D2R - ra; // hour angle (rad)
+  const ra = raDeg * DEG;
+  const dec = decDeg * DEG;
+  const lat = latDeg * DEG;
+  const H = (lstHours * 15) * DEG - ra; // hour angle (rad)
   const sinAlt = Math.sin(dec) * Math.sin(lat) + Math.cos(dec) * Math.cos(lat) * Math.cos(H);
   const alt = Math.asin(Math.max(-1, Math.min(1, sinAlt)));
   const cosAz = (Math.sin(dec) - Math.sin(alt) * Math.sin(lat)) / (Math.cos(alt) * Math.cos(lat));
@@ -133,8 +133,8 @@ export function computeSky(date: Date, latDeg: number, lonDeg: number, o: SkyOpt
   if (o.satellites && o.tles.length) {
     const gmst = satellite.gstime(date);
     const observerGd = {
-      longitude: lonDeg * D2R,
-      latitude: latDeg * D2R,
+      longitude: lonDeg * DEG,
+      latitude: latDeg * DEG,
       height: 0,
     };
     for (const tle of o.tles) {
@@ -186,7 +186,7 @@ export function nextISSPass(
   if (!iss) return null;
   const rec = getSatrec(iss);
   if (!rec) return null;
-  const observerGd = { longitude: lonDeg * D2R, latitude: latDeg * D2R, height: 0 };
+  const observerGd = { longitude: lonDeg * DEG, latitude: latDeg * DEG, height: 0 };
   const stepMs = 30_000;
   for (let t = fromMs + stepMs; t < fromMs + horizonHours * 3600_000; t += stepMs) {
     const date = new Date(t);

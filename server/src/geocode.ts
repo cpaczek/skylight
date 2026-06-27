@@ -3,7 +3,7 @@
 // cities, and airport codes. Kept dependency-free and unit-testable; the network
 // piece takes an injectable endpoint so tests never hit the real service.
 
-import { formatLatLon } from "@shared/geo.js";
+import { formatLatLon } from "@shared/format.js";
 
 export interface GeoResult {
   lat: number;

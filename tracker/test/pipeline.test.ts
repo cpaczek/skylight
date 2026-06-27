@@ -4,8 +4,9 @@
 
 import { describe, expect, it } from "vitest";
 import {
-  AxisTracker,
   DEFAULT_CONFIG,
+  FT_TO_M,
+  AxisTracker,
   azElFromSite,
   mountFromWorld,
   norm180,
@@ -40,7 +41,7 @@ function passFix(tSec: number): Aircraft {
     typeCode: "B738",
     lat: start.lat,
     lon: start.lon,
-    altGeom: start.altM / 0.3048,
+    altGeom: start.altM / FT_TO_M,
     gs: 250,
     track: 90,
     baroRate: 0,

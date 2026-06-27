@@ -2,6 +2,9 @@
 
 import { describe, expect, it } from "vitest";
 import {
+  DEG,
+  KT_TO_MS,
+  FT_TO_M,
   AxisTracker,
   angularSizeDeg,
   estimateTurnRate,
@@ -30,7 +33,7 @@ describe("predictGeo", () => {
       { lat: 37.6, lon: -122.4, altM: 1000, gsKt: 0, trackDeg: 0, vRateFpm: 1200 },
       30,
     );
-    expect(p.altM).toBeCloseTo(1000 + (1200 * 0.3048 / 60) * 30, 3);
+    expect(p.altM).toBeCloseTo(1000 + (1200 * FT_TO_M / 60) * 30, 3);
   });
 
   it("turn integration converges to straight for tiny rates", () => {
@@ -46,7 +49,7 @@ describe("predictGeo", () => {
     const p = predictGeo(k, 30);
     // Radius = v/ω: 102.9 m/s / 0.05236 rad/s ≈ 1964 m. After a quarter turn
     // starting north, displacement = (R, R) east/north.
-    const R = (200 * 0.514444) / (3 * Math.PI / 180);
+    const R = (200 * KT_TO_MS) / (3 * DEG);
     expect((p.lat - k.lat) * 110540).toBeCloseTo(R, -2);
     expect((p.lon - k.lon) * 111320 * Math.cos((37.6 * Math.PI) / 180)).toBeCloseTo(R, -2);
   });

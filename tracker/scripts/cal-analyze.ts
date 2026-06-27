@@ -6,9 +6,8 @@
 //   pnpm exec tsx scripts/cal-analyze.ts /tmp/autocal.json '<mount json>'
 
 import fs from "node:fs";
-import { norm180, solveMount, worldFromMount, type MountModel } from "@shared/index.js";
+import { DEG, norm180, solveMount, worldFromMount, type MountModel } from "@shared/index.js";
 
-const DEG = Math.PI / 180;
 const [, , file, mountJson] = process.argv;
 const { samples } = JSON.parse(fs.readFileSync(file, "utf8")) as {
   samples: { panDeg: number; tiltDeg: number; azDeg: number; elDeg: number; t: number }[];

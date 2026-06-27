@@ -4,7 +4,7 @@
 
 import type { Aircraft, Config, DataSource } from "@shared/index.js";
 import type { SourceStatus } from "@shared/index.js";
-import { llToMeters, metersToMiles, rangeMeters } from "@shared/index.js";
+import { NM_PER_MILE, llToMeters, metersToMiles, rangeMeters } from "@shared/index.js";
 import { lookupAirline, lookupType } from "./enrich/tables.js";
 import type { RouteEnricher } from "./enrich/routes.js";
 
@@ -50,8 +50,6 @@ function normalize(raw: RawAircraft, ts: number): Aircraft | null {
     ts,
   };
 }
-
-const NM_PER_MILE = 0.868976;
 
 async function fetchJson(url: string): Promise<any> {
   const res = await fetch(url, { signal: AbortSignal.timeout(5000) });

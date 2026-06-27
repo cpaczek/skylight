@@ -82,7 +82,11 @@ main {
 }
 
 .section {
-  margin-top: 18px;
+  margin-top: 30px;
+
+  &:first-child {
+    margin-top: 18px;
+  }
 }
 .section-title {
   font-size: 12px;
@@ -172,7 +176,7 @@ main {
   display: flex;
   align-items: baseline;
   justify-content: flex-end;
-  min-width: 62px;
+  width: 62px;
 }
 .slider-value,
 .slider-value input[type="number"] {

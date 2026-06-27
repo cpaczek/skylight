@@ -14,14 +14,13 @@
 import fs from "node:fs";
 import { dirname } from "node:path";
 import {
+  DEG,
   norm180,
   norm360,
   solveMount,
   worldFromMount,
   type MountModel,
 } from "@shared/index.js";
-
-const DEG = Math.PI / 180;
 
 export interface AutoCalSample {
   /** Mechanical pose that would center the reference. */

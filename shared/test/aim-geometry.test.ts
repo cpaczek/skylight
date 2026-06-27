@@ -1,18 +1,17 @@
 // Geometry: az/el/slant from ECEF→ENU vs independent truth.
 
 import { describe, expect, it } from "vitest";
-import { azElFromSite, type GeoPoint } from "../src/index.js";
+import { DEG, azElFromSite, type GeoPoint } from "../src/index.js";
 
 const SFO: GeoPoint = { lat: 37.6213, lon: -122.379, altM: 0 };
 
 /** Independent great-circle initial bearing (spherical, for cross-check). */
 function greatCircleBearing(lat1: number, lon1: number, lat2: number, lon2: number): number {
-  const D = Math.PI / 180;
-  const dLon = (lon2 - lon1) * D;
-  const y = Math.sin(dLon) * Math.cos(lat2 * D);
+  const dLon = (lon2 - lon1) * DEG;
+  const y = Math.sin(dLon) * Math.cos(lat2 * DEG);
   const x =
-    Math.cos(lat1 * D) * Math.sin(lat2 * D) -
-    Math.sin(lat1 * D) * Math.cos(lat2 * D) * Math.cos(dLon);
+    Math.cos(lat1 * DEG) * Math.sin(lat2 * DEG) -
+    Math.sin(lat1 * DEG) * Math.cos(lat2 * DEG) * Math.cos(dLon);
   return ((Math.atan2(y, x) * 180) / Math.PI + 360) % 360;
 }
 

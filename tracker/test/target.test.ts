@@ -2,6 +2,7 @@
 
 import { describe, expect, it } from "vitest";
 import type { Aircraft, GeoPoint, TargetCriteria } from "@shared/index.js";
+import { FT_TO_M } from "@shared/index.js";
 import { selectTarget } from "../src/pointing/target.js";
 
 const SITE: GeoPoint = { lat: 37.6213, lon: -122.379, altM: 0 };
@@ -22,7 +23,7 @@ function planeAt(hex: string, elDeg: number, now: number, extra: Partial<Aircraf
     flight: hex.toUpperCase(),
     lat: SITE.lat + groundM / 110540,
     lon: SITE.lon,
-    altGeom: altM / 0.3048,
+    altGeom: altM / FT_TO_M,
     gs: 250,
     track: 0,
     ts: now,

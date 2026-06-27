@@ -5,8 +5,9 @@
 
 import { describe, expect, it } from "vitest";
 import {
-  AxisTracker,
   DEFAULT_CONFIG,
+  FT_TO_M,
+  AxisTracker,
   angularSepDeg,
   azElFromSite,
   mountFromWorld,
@@ -42,7 +43,7 @@ function overheadFix(tSec: number): Aircraft {
     typeCode: "A320",
     lat: start.lat,
     lon: start.lon,
-    altGeom: start.altM / 0.3048,
+    altGeom: start.altM / FT_TO_M,
     gs: 250,
     track: 0,
     baroRate: 0,

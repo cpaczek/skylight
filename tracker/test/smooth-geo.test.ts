@@ -4,7 +4,7 @@
 // toward each fix (denoise).
 
 import { describe, expect, it } from "vitest";
-import { azElFromSite, type Aircraft, type GeoPoint } from "@shared/index.js";
+import { FT_TO_M, KT_TO_MS, azElFromSite, type Aircraft, type GeoPoint } from "@shared/index.js";
 import { TrackHistory } from "../src/pointing/predict.js";
 
 const SITE: GeoPoint = { lat: 37.6213, lon: -122.379, altM: 0 };
@@ -18,7 +18,7 @@ const M_PER_DEG_LON = 111_320 * Math.cos((LAT0 * Math.PI) / 180);
 
 /** True position dtSec into the flight (no noise). */
 function truth(dtSec: number): { lat: number; lon: number } {
-  const east = GS * 0.514444 * dtSec; // m
+  const east = GS * KT_TO_MS * dtSec; // m
   return { lat: LAT0, lon: LON0 + east / M_PER_DEG_LON };
 }
 
@@ -56,7 +56,7 @@ describe("TrackHistory.smoothGeo", () => {
       const t = t0 + i * 1000; // 1 Hz fixes
       const ac = fix(i, t, true);
       hist.observe(ac, t);
-      const altM = ALT_FT * 0.3048;
+      const altM = ALT_FT * FT_TO_M;
       // True (noise-free) aim azimuth at this instant.
       const tp = truth((t - t0) / 1000);
       const trueAz = azElFromSite(SITE, { ...tp, altM }).azDeg;

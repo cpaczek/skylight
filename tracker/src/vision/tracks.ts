@@ -10,9 +10,7 @@
 //
 // Pure data + math (no camera, no timers) so it is directly unit-testable.
 
-import { norm180 } from "@shared/index.js";
-
-const DEG = Math.PI / 180;
+import { DEG, norm180 } from "@shared/index.js";
 
 /** One blob observation, already converted to world angles at frame time. */
 export interface WorldObs {

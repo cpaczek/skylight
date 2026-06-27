@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { FT_PER_M } from "../src/constants.js";
 import {
   groundToSkyAngles,
   skyElevToRadius,
@@ -9,8 +10,6 @@ import {
 // Pure geometry behind the opt-in "sky" projection mode (PR #10). These lock in
 // the look-up dome mapping so apparent motion stays correct: overhead aircraft
 // near the zenith, horizon aircraft near the field edge.
-
-const FT_PER_M = 1 / 0.3048;
 
 describe("groundToSkyAngles", () => {
   it("maps cardinal ground bearings to azimuth", () => {
