@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { Airport, Config, ShowFields, LocationProfile } from "@shared/index.js";
 import { formatLatLon } from "@shared/geo.js";
+import { CONSTELLATIONS } from "@shared/stars.js";
 import { geoAvailability, geoErrorMessage } from "../lib/geolocation.js";
 import { useStream } from "../lib/useStream.js";
 import { nextISSPass, type Tle } from "../display/celestial.js";
@@ -513,6 +514,12 @@ export function Control() {
                 <Slider value={cfg.starLabelMagLimit} min={0} max={3} step={0.1}
                   onChange={(v) => set({ starLabelMagLimit: v })} />
               </Row>
+              {CONSTELLATIONS.map((c) => (
+                <Row key={c.id} label={c.name} indent={true}>
+                  <Toggle value={cfg.constellations[c.id] !== false}
+                    onChange={(v) => set({ constellations: { ...cfg.constellations, [c.id]: v } })} />
+                </Row>
+              ))}
             </>
           )}
           <Row label="Sun">

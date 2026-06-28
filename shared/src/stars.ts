@@ -10,6 +10,12 @@ export interface Star {
   mag: number;
 }
 
+export interface Constellation {
+  id: string;
+  name: string;
+  segments: [string, string][];
+}
+
 export const STARS: Star[] = [
   { id: "sirius", name: "Sirius", ra: 101.288, dec: -16.716, mag: -1.46 },
   { id: "canopus", name: "Canopus", ra: 95.988, dec: -52.696, mag: -0.74 },
@@ -58,18 +64,58 @@ export const STARS: Star[] = [
 const byId = new Map(STARS.map((s) => [s.id, s]));
 export const star = (id: string): Star | undefined => byId.get(id);
 
-/** Asterism line segments, by star id, drawn faintly when both ends are up. */
-export const ASTERISMS: [string, string][] = [
-  // Orion — shoulders, two diagonals down to the belt, the belt itself, two
-  // diagonals down to the feet, and the feet, forming the classic hourglass.
-  ["betelgeuse", "bellatrix"], ["betelgeuse", "alnitak"], ["bellatrix", "mintaka"],
-  ["alnitak", "alnilam"], ["alnilam", "mintaka"],
-  ["alnitak", "saiph"], ["mintaka", "rigel"], ["saiph", "rigel"],
-  // Big Dipper
-  ["dubhe", "merak"], ["merak", "phecda"], ["phecda", "megrez"],
-  ["megrez", "dubhe"], ["megrez", "alioth"], ["alioth", "mizar"],
-  ["mizar", "alkaid"],
-  // Cassiopeia (the W)
-  ["segin", "ruchbah"], ["ruchbah", "navi"], ["navi", "schedar"],
-  ["schedar", "caph"],
+/** Asterism line segments grouped by constellation, using star ids. */
+export const CONSTELLATIONS: Constellation[] = [
+  {
+    id: "orion",
+    name: "Orion",
+    segments: [
+      // Shoulders, two diagonals down to the belt, the belt itself, two
+      // diagonals down to the feet, and the feet, forming the classic hourglass.
+      ["betelgeuse", "bellatrix"], ["betelgeuse", "alnitak"], ["bellatrix", "mintaka"],
+      ["alnitak", "alnilam"], ["alnilam", "mintaka"],
+      ["alnitak", "saiph"], ["mintaka", "rigel"], ["saiph", "rigel"],
+    ],
+  },
+  {
+    id: "ursa_major",
+    name: "Big Dipper",
+    segments: [
+      ["dubhe", "merak"], ["merak", "phecda"], ["phecda", "megrez"],
+      ["megrez", "dubhe"], ["megrez", "alioth"], ["alioth", "mizar"],
+      ["mizar", "alkaid"],
+    ],
+  },
+  {
+    id: "cassiopeia",
+    name: "Cassiopeia",
+    segments: [
+      ["segin", "ruchbah"], ["ruchbah", "navi"], ["navi", "schedar"],
+      ["schedar", "caph"],
+    ],
+  },
+  {
+    id: "summer_triangle",
+    name: "Summer Triangle",
+    segments: [["vega", "deneb"], ["deneb", "altair"], ["altair", "vega"]],
+  },
+  {
+    id: "winter_triangle",
+    name: "Winter Triangle",
+    segments: [["betelgeuse", "sirius"], ["sirius", "procyon"], ["procyon", "betelgeuse"]],
+  },
 ];
+
+/** True if a constellation's lines should draw. Unknown/missing ids default visible. */
+export function constellationVisible(constellations: Record<string, boolean>, id: string): boolean {
+  return constellations[id] !== false;
+}
+
+/** Flattened asterism segments for the currently-visible constellations. */
+export function visibleAsterisms(constellations: Record<string, boolean>): [string, string][] {
+  return CONSTELLATIONS.filter((c) => constellationVisible(constellations, c.id))
+    .flatMap((c) => c.segments);
+}
+
+/** Asterism line segments, by star id, drawn faintly when both ends are up. */
+export const ASTERISMS: [string, string][] = CONSTELLATIONS.flatMap((c) => c.segments);

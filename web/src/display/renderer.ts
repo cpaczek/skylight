@@ -40,7 +40,7 @@ import {
 } from "@shared/index.js";
 import { classifyGlyph, drawAircraftGlyph, GLYPH_SCALE } from "./aircraftGlyph.js";
 import { computeSky, type Sky, type Tle } from "./celestial.js";
-import { ASTERISMS } from "./stars.js";
+import { visibleAsterisms } from "./stars.js";
 import tzLookup from "tz-lookup";
 
 /** How far in the past we render, ms. Just over the ~1 Hz fix interval. */
@@ -680,7 +680,7 @@ export class Renderer {
       ctx.save();
       ctx.strokeStyle = `rgba(150,170,220,${0.14 * b})`;
       ctx.lineWidth = 1;
-      for (const [a, c] of ASTERISMS) {
+      for (const [a, c] of visibleAsterisms(cfg.constellations)) {
         const pa = pts.get(a);
         const pc = pts.get(c);
         if (pa && pc) {

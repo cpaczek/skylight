@@ -13,6 +13,7 @@ import type {
 } from "./camera.js";
 import type { FovPoint } from "./aim.js";
 import { SFO_AIRPORT, type Airport } from "./airport.js";
+import { CONSTELLATIONS } from "./stars.js";
 
 export type Theme = "ambient" | "telemetry" | "focus";
 export type LabelDensity = "all" | "nearestN" | "nearestOnly";
@@ -306,6 +307,8 @@ export interface Config {
   satelliteLabels: boolean;
   /** Draw the naked-eye planets (Venus, Jupiter, Mars, Saturn, Mercury). */
   showPlanets: boolean;
+  /** Per-constellation asterism line visibility. Missing/unknown ids default to visible. */
+  constellations: Record<string, boolean>;
   /** Faintest star magnitude to draw (higher = more stars). */
   starMagLimit: number;
   /** Faintest star magnitude to label with its name (higher = more names). */
@@ -398,6 +401,7 @@ export const DEFAULT_CONFIG: Config = {
   showSatellites: true,
   satelliteLabels: false,
   showPlanets: true,
+  constellations: Object.fromEntries(CONSTELLATIONS.map((c) => [c.id, true])),
   starMagLimit: 2.6,
   starLabelMagLimit: 0.3,
   skyTimeOffsetMin: 0,
@@ -519,6 +523,7 @@ export function mergeConfig(base: Config, patch: Partial<Config>): Config {
     palette: { ...base.palette, ...(patch.palette ?? {}) },
     fonts: { ...base.fonts, ...(patch.fonts ?? {}) },
     showFields: { ...base.showFields, ...(patch.showFields ?? {}) },
+    constellations: { ...base.constellations, ...(patch.constellations ?? {}) },
     tracker: mergeTrackerConfig(base.tracker, patch.tracker ?? {}),
   };
 }
