@@ -394,3 +394,20 @@ A: You can change the location settings from the control panel under the 'Locati
 
 ### Q: Is it possible to run Skylight without a radio?
 A: Yes, you can run Skylight using the public API by setting `DATA_SOURCE=api` in your environment variables.
+
+## Contributing
+
+We welcome contributions to Skylight! If you'd like to help out, please follow these guidelines:
+
+1. **Reporting Issues**: If you find a bug or have a suggestion, please open an issue in the GitHub repository. Provide as much detail as possible.
+
+2. **Submitting Pull Requests**: To contribute code, please fork the repository, make your changes, and submit a pull request. Ensure that your code adheres to the project's style guidelines and includes appropriate tests.
+
+3. **Code Style**: Please follow the existing code style in the project. Use TypeScript conventions and ensure your code is well-documented.
+
+4. **Testing**: Before submitting your pull request, make sure that all tests pass. You can run the tests using the command:
+   ```bash
+   pnpm test
+   ```
+
+Thank you for considering contributing to Skylight!
