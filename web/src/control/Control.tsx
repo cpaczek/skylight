@@ -180,7 +180,7 @@ export function Control() {
       { enableHighAccuracy: true, timeout: 15000, maximumAge: 60_000 },
     );
   };
-  const planetariumMode = cfg.planetariumMode;
+
   // plane preview card
   const planePreview = labelLines(
     cfg,
