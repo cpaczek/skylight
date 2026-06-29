@@ -203,6 +203,7 @@ export interface TrackerConfig {
       everyNTicks: number;
     };
   };
+
   /** Idle "ready position" when auto mode has no target. */
   home: {
     enabled: boolean;
@@ -297,7 +298,9 @@ export interface Config {
   /** Show the on-screen calibration HUD on the display. */
   showHud: boolean;
 
-  // --- sky layer (sun / moon / stars / satellites at true positions) ---
+  /** Planetarium mode - don't show any planes */
+  planetariumMode: boolean;
+  // --- sky layer (sun / moon / stars / satellites at true positions) ---  
   showStars: boolean;
   showSun: boolean;
   showMoon: boolean;
@@ -392,6 +395,7 @@ export const DEFAULT_CONFIG: Config = {
   airport: SFO_AIRPORT,
   showHud: false,
 
+  planetariumMode: false,
   showStars: true,
   showSun: true,
   showMoon: true,
