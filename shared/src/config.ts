@@ -203,6 +203,8 @@ export interface TrackerConfig {
       everyNTicks: number;
     };
   };
+  /** Planetarium mode - don't show any planes */
+  planetariumMode: boolean;
   /** Idle "ready position" when auto mode has no target. */
   home: {
     enabled: boolean;
