@@ -104,6 +104,8 @@ interface Track {
   hasPos: boolean;
   /** Smoothed appearance alpha (fade in on spawn, out when stale). */
   life: number;
+  /** Eased on-screen glyph heading (rad), so track updates rotate smoothly. */
+  headingSmooth?: number;
 }
 
 type ProjOpts = Parameters<typeof project>[1];
@@ -448,7 +450,13 @@ export class Renderer {
           ? groundToSkyAngles(sample.m, sample.altFt, this.fallbackAz(tr))
           : null;
       const p = this.toPoint(sample, cfg, proj, tr);
-      const heading = this.screenHeading(tr, tt, cfg, proj);
+      // Ease the glyph toward its target heading (shortest arc) so once-a-fix
+      // track changes read as a turn, not a snap (#61).
+      const headingRaw = this.screenHeading(tr, tt, cfg, proj);
+      const prevHeading = tr.headingSmooth ?? headingRaw;
+      const arc = ((headingRaw - prevHeading + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
+      const heading = prevHeading + arc * Math.min(1, frameDt * 6);
+      tr.headingSmooth = heading;
       const edgeFade =
         cfg.projectionMode === "sky" && sky
           ? clamp01(sky.elev / 6) * clamp01((cfg.radiusMiles - rangeMi) / (cfg.radiusMiles * 0.14))
@@ -497,24 +505,30 @@ export class Renderer {
   }
 
   private screenHeading(tr: Track, tt: number, cfg: Config, proj: ProjOpts): number {
-    const a = this.sampleAt(tr, tt - 400, cfg);
-    const b = this.sampleAt(tr, tt + 400, cfg);
-    if (a && b) {
-      const pa = this.toPoint(a, cfg, proj, tr);
-      const pb = this.toPoint(b, cfg, proj, tr);
-      if (Math.hypot(pb.x - pa.x, pb.y - pa.y) > 0.5) {
-        return Math.atan2(pb.y - pa.y, pb.x - pa.x);
-      }
-    }
+    // Reported ground track first: it's transponder-smoothed and stays stable
+    // even when the aircraft barely moves on screen. Slow GA traffic at a wide
+    // radius covers well under a pixel in this ±400 ms window, so a heading
+    // derived from screen positions is atan2 of fix noise — the glyph spins
+    // like a radar sweep (#61). Projecting a dead-reckoned point through the
+    // same transform keeps rotation/mirror/sky-dome handling intact.
     const mid = this.sampleAt(tr, tt, cfg);
-    // Stationary or no current track? Keep the last known heading from history
-    // instead of snapping to 0° (north) — matters for parked/taxiing aircraft.
     const track = this.fallbackAz(tr);
     if (mid && track != null) {
       const ahead = deadReckon(mid.m, track, 120, 1);
       const p0 = this.toPoint(mid, cfg, proj, tr);
       const p1 = this.toPoint({ m: ahead, altFt: mid.altFt }, cfg, proj, tr);
       return Math.atan2(p1.y - p0.y, p1.x - p0.x);
+    }
+    // No reported track anywhere in history: fall back to screen motion, but
+    // only over a baseline long enough that position jitter can't dominate.
+    const a = this.sampleAt(tr, tt - 400, cfg);
+    const b = this.sampleAt(tr, tt + 400, cfg);
+    if (a && b) {
+      const pa = this.toPoint(a, cfg, proj, tr);
+      const pb = this.toPoint(b, cfg, proj, tr);
+      if (Math.hypot(pb.x - pa.x, pb.y - pa.y) > 2) {
+        return Math.atan2(pb.y - pa.y, pb.x - pa.x);
+      }
     }
     return 0;
   }
