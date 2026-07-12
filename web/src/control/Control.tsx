@@ -543,6 +543,10 @@ export function Control() {
         </Section>
 
         <Section title="Sky">
+          <Row label="Planetarium mode" hint="Only show stars etc. - no planes">
+            <Toggle value={cfg.planetariumMode} onChange={(v) => set({ planetariumMode: v })} />
+          </Row>
+ 
           <Row label="Stars">
             <Toggle value={cfg.showStars} onChange={(v) => set({ showStars: v })} />
           </Row>
