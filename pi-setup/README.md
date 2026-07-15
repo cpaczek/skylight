@@ -52,7 +52,7 @@ LAT=37.6213 LON=-122.379 ./pi-setup/install-on-pi.sh            # set your coord
 
 Installs the rtl-sdr-blog V4 driver (+ DVB-T blacklist), dump1090-fa, Node + pnpm,
 builds the app, and enables the `skylight-server` service. **Verify decode first** with
-`rtl_test -t` and `curl -s localhost:8080/aircraft.json | head` before moving on.
+`rtl_test -t` and `curl -s localhost:8080/data/aircraft.json | head` before moving on.
 
 ## 3. Kiosk display - on the Pi
 

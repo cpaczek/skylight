@@ -122,6 +122,6 @@ echo
 echo "Done."
 echo "  Display : http://localhost:3000/  (point Chromium kiosk here — see setup-kiosk.sh)"
 echo "  Control : http://$IP:3000/control  (open on your phone)"
-echo "  Decoder : http://$IP:8080/aircraft.json  (raw decoded feed)"
+echo "  Decoder : http://$IP:8080/data/aircraft.json  (raw decoded feed)"
 echo
 echo "Verify decode first:  rtl_test -t   then   curl -s localhost:8080/data/aircraft.json | head"
