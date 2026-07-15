@@ -156,6 +156,10 @@ export function labelLines(cfg: Config, ac: Aircraft): { text: string; kind: "ti
     else if (alt != null) sub.push(formatAltitude(alt, cfg.altitudeUnit));
   }
   if (f.speed && ac.gs != null) sub.push(formatSpeed(ac.gs, cfg.speedUnit));
+  if (f.verticalRate && ac.baroRate != null) {
+    const sign = ac.baroRate > 0 ? "+" : "";
+    sub.push(`${sign}${ac.baroRate} fpm`);
+  }
   if (sub.length) out.push({ text: sub.join("   "), kind: "sub" });
 
   if (f.destination && ac.destination && routePlausible(ac, cfg)) {
