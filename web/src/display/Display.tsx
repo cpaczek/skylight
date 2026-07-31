@@ -16,6 +16,9 @@ const CARD_FALLBACK_W = 220;
 const CARD_FALLBACK_H = 140;
 const CARD_OFFSET_X = -220;
 const CARD_OFFSET_Y = 80;
+// Mouse must move this far from mousedown before a press becomes a drag,
+// so a plain click (e.g. on the ✕ button) never gets eaten as a no-op drag.
+const DRAG_THRESHOLD_PX = 4;
 
 export function Display() {
   const { state, conn } = useStream("display");
@@ -40,6 +43,36 @@ export function Display() {
   const [cursorPos, setCursorPos] = useState({ x: 0, y: 0 });
   const idleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [liveSat, setLiveSat] = useState<SkyBody | null>(null);
+
+  // Per-selection card drag state, kept in a ref so 60fps drag updates don't
+  // trigger re-renders — the tick() RAF loop below reads it directly, same
+  // pattern as the object position-tracking it already does.
+  const dragRef = useRef<{
+    dragging: boolean;
+    startClientX: number;
+    startClientY: number;
+    cardStartX: number;
+    cardStartY: number;
+    dragX: number;
+    dragY: number;
+    /** Offset chosen by the last drag on the CURRENT selection; null = use the default offset. */
+    dropOffset: { x: number; y: number } | null;
+    /** One-shot: swallow the synthetic click that follows a drag's mouseup. */
+    justDragged: boolean;
+  }>({
+    dragging: false,
+    startClientX: 0,
+    startClientY: 0,
+    cardStartX: 0,
+    cardStartY: 0,
+    dragX: 0,
+    dragY: 0,
+    dropOffset: null,
+    justDragged: false,
+  });
+  // Only for the custom cursor dot's styling while dragging — everything
+  // else about drag state lives in dragRef to avoid extra re-renders.
+  const [cardDragging, setCardDragging] = useState(false);
 
   // Create renderer once.
   useEffect(() => {
@@ -68,6 +101,9 @@ export function Display() {
   }, [state.connected, state.status]);
 
   useEffect(() => {
+    // New selection: any custom drag offset belonged to the previous object.
+    dragRef.current.dropOffset = null;
+    dragRef.current.dragging = false;
     if (!selected) return;
     let raf = 0;
     const tick = () => {
@@ -84,14 +120,17 @@ export function Display() {
 
       const cardW = cardWrapperRef.current?.offsetWidth || CARD_FALLBACK_W;
       const cardH = cardWrapperRef.current?.offsetHeight || CARD_FALLBACK_H;
-      const clampedX = Math.min(
-        Math.max(p.x + CARD_OFFSET_X, CARD_MARGIN),
-        rect.width - cardW - CARD_MARGIN,
-      );
-      const clampedY = Math.min(
-        Math.max(p.y + CARD_OFFSET_Y, CARD_MARGIN),
-        rect.height - cardH - CARD_MARGIN,
-      );
+
+      const drag = dragRef.current;
+      // While dragging, follow the cursor directly; otherwise follow the
+      // object at the default offset, or the offset chosen by the last drag.
+      const rawX = drag.dragging ? drag.dragX : p.x + (drag.dropOffset?.x ?? CARD_OFFSET_X);
+      const rawY = drag.dragging ? drag.dragY : p.y + (drag.dropOffset?.y ?? CARD_OFFSET_Y);
+      // Same clamp in both cases: keeps the card fully on-screen and means
+      // there's no snap when a drag ends (the dropped position was already
+      // the clamped position).
+      const clampedX = Math.min(Math.max(rawX, CARD_MARGIN), rect.width - cardW - CARD_MARGIN);
+      const clampedY = Math.min(Math.max(rawY, CARD_MARGIN), rect.height - cardH - CARD_MARGIN);
 
       if (cardWrapperRef.current) {
         cardWrapperRef.current.style.left = `${clampedX}px`;
@@ -100,10 +139,16 @@ export function Display() {
       }
 
       if (lineRef.current) {
-        lineRef.current.setAttribute("x1", String(clampedX));
-        lineRef.current.setAttribute("y1", String(clampedY));
+        // Attach to whichever point on the card's box is closest to the
+        // object, so the line never crosses over or hangs under the card.
+        const attachX = Math.min(Math.max(p.x, clampedX), clampedX + cardW);
+        const attachY = Math.min(Math.max(p.y, clampedY), clampedY + cardH);
+        lineRef.current.setAttribute("x1", String(attachX));
+        lineRef.current.setAttribute("y1", String(attachY));
         lineRef.current.setAttribute("x2", String(p.x));
         lineRef.current.setAttribute("y2", String(p.y));
+        // Fade the connector in step with the card's own alpha.
+        lineRef.current.setAttribute("stroke-opacity", String(alpha * 0.55));
       }
 
       raf = requestAnimationFrame(tick);
@@ -157,11 +202,19 @@ export function Display() {
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
     setCursorPos({ x, y });
+    // Dragging the card: don't hit-test the canvas underneath the cursor.
+    if (dragRef.current.dragging) return;
     const hit = findNearest(x, y);
     rendererRef.current?.setHovered(hit?.id ?? null);
   };
 
   const onClick = (e: React.MouseEvent) => {
+    // Swallow the synthetic click that follows a drag's mouseup — a drag is
+    // not a click-elsewhere-closes-the-card or click-to-select gesture.
+    if (dragRef.current.justDragged) {
+      dragRef.current.justDragged = false;
+      return;
+    }
     const rect = rootRef.current?.getBoundingClientRect();
     if (!rect) return;
     if ((e.target as HTMLElement).closest(".plane-card")) return;
@@ -182,6 +235,67 @@ export function Display() {
     }
     setSelected(hit);
     rendererRef.current?.setSelected(hit.id);
+  };
+
+  // Press-and-drag the info card to reposition it. Shared by PlaneCard and
+  // SatelliteCard since both render through cardWrapperRef — no per-card
+  // drag logic needed. A plain click (no movement past the threshold) falls
+  // through untouched, so the card's own onClick/close button still work.
+  const onCardMouseDown = (e: React.MouseEvent) => {
+    if (e.button !== 0 || !selected) return;
+    const wrapper = cardWrapperRef.current;
+    if (!wrapper) return;
+    // Native text-selection/drag-ghost would otherwise kick in as the
+    // cursor moves across the card's text while dragging.
+    e.preventDefault();
+
+    const drag = dragRef.current;
+    drag.startClientX = e.clientX;
+    drag.startClientY = e.clientY;
+    drag.cardStartX = wrapper.offsetLeft;
+    drag.cardStartY = wrapper.offsetTop;
+    drag.dragX = drag.cardStartX;
+    drag.dragY = drag.cardStartY;
+
+    const onMove = (ev: MouseEvent) => {
+      const dx = ev.clientX - drag.startClientX;
+      const dy = ev.clientY - drag.startClientY;
+      if (!drag.dragging && Math.hypot(dx, dy) >= DRAG_THRESHOLD_PX) {
+        drag.dragging = true;
+        setCardDragging(true);
+        rendererRef.current?.setHovered(null);
+      }
+      if (drag.dragging) {
+        drag.dragX = drag.cardStartX + dx;
+        drag.dragY = drag.cardStartY + dy;
+      }
+    };
+
+    const onUp = () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+      if (drag.dragging) {
+        // Anchor future frames at the offset between the object and where
+        // the card was actually dropped, not the default offset.
+        const p = rendererRef.current?.getScreenPos(selected.id);
+        const wrapperNow = cardWrapperRef.current;
+        if (p && wrapperNow) {
+          drag.dropOffset = { x: wrapperNow.offsetLeft - p.x, y: wrapperNow.offsetTop - p.y };
+        }
+        // Consumed by the very next click (the synthetic one this mouseup
+        // is about to generate) — self-expires so it can never swallow an
+        // unrelated later click.
+        drag.justDragged = true;
+        setTimeout(() => {
+          drag.justDragged = false;
+        }, 0);
+      }
+      drag.dragging = false;
+      setCardDragging(false);
+    };
+
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
   };
 
   // Keyboard calibration (handy when a keyboard is plugged into the Pi).
@@ -255,7 +369,7 @@ export function Display() {
         >
           <line
             ref={lineRef}
-            stroke="rgba(232,236,255,0.55)"
+            stroke="rgb(232,236,255)"
             strokeWidth={1.5}
             strokeDasharray="3,4"
           />
@@ -264,6 +378,7 @@ export function Display() {
 
       <div
         ref={cardWrapperRef}
+        onMouseDown={onCardMouseDown}
         style={{ position: "absolute", left: -9999, top: -9999, zIndex: 6 }}
       >
         {selected && cfg && selected.kind === "aircraft" && (
@@ -291,12 +406,12 @@ export function Display() {
         <div
           style={{
             position: "absolute",
-            left: cursorPos.x - 3,
-            top: cursorPos.y - 3,
-            width: 6,
-            height: 6,
+            left: cursorPos.x - (cardDragging ? 5 : 3),
+            top: cursorPos.y - (cardDragging ? 5 : 3),
+            width: cardDragging ? 10 : 6,
+            height: cardDragging ? 10 : 6,
             borderRadius: "50%",
-            background: "rgba(255,255,255,0.85)",
+            background: cardDragging ? "rgba(255,255,255,1)" : "rgba(255,255,255,0.85)",
             pointerEvents: "none",
             zIndex: 10,
           }}
