@@ -86,3 +86,20 @@ body,
 .ambient-warn {
   color: #e0a23d;
 }
+
+.card-close-btn {
+  transition: color 0.15s ease, transform 0.15s ease;
+}
+.card-close-btn:hover {
+  color: #FF5A47 !important;
+  transform: scale(1.25);
+}
+
+.plane-card {
+  animation: card-in 0.15s ease-out;
+  transform-origin: top left;
+}
+@keyframes card-in {
+  from { opacity: 0; transform: scale(0.94); }
+  to { opacity: 1; transform: scale(1); }
+}

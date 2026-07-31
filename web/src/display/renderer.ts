@@ -49,7 +49,7 @@ import {
   type SkyAngles,
 } from "@shared/index.js";
 import { classifyGlyph, drawAircraftGlyph, GLYPH_SCALE } from "./aircraftGlyph.js";
-import { computeSky, type Sky, type Tle } from "./celestial.js";
+import { computeSky, type Sky, type Tle, type SkyBody } from "./celestial.js";
 import { visibleAsterisms } from "./stars.js";
 import tzLookup from "tz-lookup";
 
@@ -192,6 +192,15 @@ interface Visible {
   sizeScale: number;
 }
 
+export interface Pickable {
+  id: string;
+  kind: "aircraft" | "satellite";
+  x: number;
+  y: number;
+  ac?: Aircraft;
+  sat?: SkyBody;
+}
+
 export class Renderer {
   private ctx: CanvasRenderingContext2D;
   private tracks = new Map<string, Track>();
@@ -216,6 +225,14 @@ export class Renderer {
    *  the staleness clock pauses so a transient fetch failure doesn't wipe the
    *  sky and re-spawn everything seconds later (#24). */
   private sourceDownAt: number | null = null;
+
+  private lastPickables: Pickable[] = [];
+  private satPickables: Pickable[] = [];
+  private lastAlpha = new Map<string, number>();
+  private hoveredId: string | null = null;
+  private lastFrameDt = 0.016;
+  private selectedId: string | null = null;
+  private hoverScale = new Map<string, number>();
 
   constructor(
     private canvas: HTMLCanvasElement,
@@ -251,6 +268,57 @@ export class Renderer {
       this.draw();
     };
     this.raf = requestAnimationFrame(loop);
+  }
+
+  setHovered(id: string | null): void {
+    this.hoveredId = id;
+  }
+
+  setSelected(id: string | null): void {
+    this.selectedId = id;
+  }
+
+  getPickables(): Pickable[] {
+    return [...this.lastPickables, ...this.satPickables];
+  }
+
+  getScreenPos(id: string): { x: number; y: number } | null {
+    const p =
+      this.lastPickables.find((p) => p.id === id) ??
+      this.satPickables.find((p) => p.id === id);
+    return p ? { x: p.x, y: p.y } : null;
+  }
+
+  getPickable(id: string): Pickable | null {
+    return (
+      this.lastPickables.find((p) => p.id === id) ??
+      this.satPickables.find((p) => p.id === id) ??
+      null
+    );
+  }
+
+  /** Current on-screen render alpha (0..1) for a tracked aircraft — the same
+   *  value driving the glyph's actual visible fade (edge-of-radius fade +
+   *  spawn/stale fade combined), or 0 if it's not currently being drawn at
+   *  all. Lets card UI mirror the glyph's true fade instead of a value that
+   *  can stay pinned at 1 while the glyph has already faded to invisible. */
+  getAlpha(hex: string): number {
+    return this.lastAlpha.get(hex) ?? 0;
+  }
+
+  /** Smoothly eases a glyph's size multiplier toward 1.45× when active
+   *  (hovered/selected), back to 1× otherwise. Self-prunes so the map never
+   *  grows unbounded across the thousands of satellites that pass through. */
+  private easedScale(id: string, active: boolean): number {
+    const target = active ? 1.45 : 1;
+    const cur = this.hoverScale.get(id) ?? 1;
+    const next = cur + (target - cur) * Math.min(1, this.lastFrameDt * 8);
+    if (!active && Math.abs(next - 1) < 0.01) {
+      this.hoverScale.delete(id);
+      return 1;
+    }
+    this.hoverScale.set(id, next);
+    return next;
   }
 
   private async fetchTles(): Promise<void> {
@@ -386,6 +454,7 @@ export class Renderer {
     const now = performance.now();
     const frameDt = this.prevFrame ? (now - this.prevFrame) / 1000 : 0.016;
     this.prevFrame = now;
+    this.lastFrameDt = frameDt;
     this.frameT = now / 1000;
 
     if (this.canvas.clientWidth !== this.w || this.canvas.clientHeight !== this.h) {
@@ -405,6 +474,7 @@ export class Renderer {
       screenH: this.h,
     };
 
+    this.satPickables = [];
     this.updateSky(cfg, now);
     this.drawSky(cfg, proj);
     this.drawOverlays(cfg, proj);
@@ -473,6 +543,17 @@ export class Renderer {
 
     // Nearest last so it paints on top.
     visible.sort((a, b) => b.rangeMi - a.rangeMi);
+
+    this.lastAlpha.clear();
+    for (const v of visible) this.lastAlpha.set(v.tr.ac.hex, v.alpha);
+
+    this.lastPickables = visible.map((v) => ({
+      id: v.tr.ac.hex,
+      kind: "aircraft" as const,
+      x: v.p.x,
+      y: v.p.y,
+      ac: v.tr.ac,
+    }));
 
     // Trails + glyphs for everyone.
     if (cfg.showDestArc) for (const v of visible) this.drawDestArc(cfg, proj, v);
@@ -809,23 +890,32 @@ export class Renderer {
       for (const sat of this.sky.sats) {
         const p = this.projectSky(sat.az, sat.alt, cfg, proj);
         const iss = sat.kind === "iss";
-        const size = iss ? 3 : 1.6;
+        const satId = sat.noradId ?? sat.name ?? `${sat.az.toFixed(1)},${sat.alt.toFixed(1)}`;
+        const isActive = satId === this.hoveredId || satId === this.selectedId;
+
+        this.satPickables.push({ id: satId, kind: "satellite", x: p.x, y: p.y, sat });
+
+        const baseSize = iss ? 3 : 1.6;
+        const hoverMul = this.easedScale(satId, isActive);
+        const size = baseSize * hoverMul;
+        const dotColor = isActive ? "255,255,255" : iss ? "140,255,214" : "170,205,255";
+
         ctx.beginPath();
         ctx.arc(p.x, p.y, size, 0, Math.PI * 2);
-        if (iss) {
-          ctx.fillStyle = `rgba(140,255,214,${0.95 * b})`;
-          ctx.shadowColor = `rgba(140,255,214,${b})`;
-          ctx.shadowBlur = 10;
-        } else {
-          ctx.fillStyle = `rgba(170,205,255,${0.65 * b})`;
+        ctx.fillStyle = `rgba(${dotColor},${(iss || isActive ? 0.95 : 0.65) * b})`;
+        if (iss || isActive) {
+          ctx.shadowColor = `rgba(${dotColor},${b})`;
+          ctx.shadowBlur = isActive ? 12 : 10;
         }
         ctx.fill();
         ctx.shadowBlur = 0;
+
+        const labelColor = isActive ? "#FFFFFF" : iss ? "#8CFFD6" : "#AEB6C6";
         if (iss) {
           skyLabels.push({
             p,
             name: "ISS",
-            color: "#8CFFD6",
+            color: labelColor,
             size,
             alpha: 0.9 * b,
             priority: -1,
@@ -834,7 +924,7 @@ export class Renderer {
           skyLabels.push({
             p,
             name: sat.name,
-            color: "#AEB6C6",
+            color: labelColor,
             size,
             alpha: 0.6 * b,
             priority: 5,
@@ -1101,7 +1191,11 @@ export class Renderer {
       const a = pts[i - 1];
       const b = pts[i];
       const f = 1 - b.age; // 1 at head, 0 at tail
-      ctx.strokeStyle = rgba(v.color, 0.55 * f * v.alpha);
+      const trailColor: [number, number, number] =
+        v.tr.ac.hex === this.hoveredId || v.tr.ac.hex === this.selectedId
+          ? [255, 255, 255]
+          : v.color;
+      ctx.strokeStyle = rgba(trailColor, 0.55 * f * v.alpha);
       ctx.lineWidth = 0.7 + 2.2 * f * (cfg.glyphSizePx / 14);
       ctx.beginPath();
       ctx.moveTo(a.p.x, a.p.y);
@@ -1114,9 +1208,15 @@ export class Renderer {
   // --- glyph: type-aware luminous silhouette ---
   private drawGlyph(cfg: Config, v: Visible): void {
     const ctx = this.ctx;
-    const color = v.emergency ? hexToRgb(cfg.palette.warn) : v.color;
+    const isActive = v.tr.ac.hex === this.hoveredId || v.tr.ac.hex === this.selectedId;
+    const color = v.emergency
+      ? hexToRgb(cfg.palette.warn)
+      : isActive
+        ? ([255, 255, 255] as [number, number, number])
+        : v.color;
     const kind = classifyGlyph(v.tr.ac);
-    const s = cfg.glyphSizePx * GLYPH_SCALE[kind] * v.sizeScale;
+    const hoverMul = this.easedScale(v.tr.ac.hex, isActive);
+    const s = cfg.glyphSizePx * GLYPH_SCALE[kind] * v.sizeScale * hoverMul;
 
     ctx.save();
     ctx.translate(v.p.x, v.p.y);
