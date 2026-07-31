@@ -13,10 +13,12 @@ import { RouteEnricher } from "./enrich/routes.js";
 import { Poller } from "./datasource.js";
 import { Hub } from "./hub.js";
 import { TleStore } from "./tle.js";
+import { SatCatStore } from "./satcat.js";
 import { resolveLocation } from "./geocode.js";
 import { buildHostMatcher, originHostname } from "./allowed-hosts.js";
 import { SfoGroundPoller } from "./sfo-ground.js";
-import { lookupAirport } from "./airports.js";
+import { lookupAirport, lookupCity } from "./airports.js";
+import { lookupAirlineByCallsign } from "./airlines.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = resolve(__dirname, "../data");
@@ -66,6 +68,9 @@ async function main(): Promise<void> {
 
   const tleStore = new TleStore(resolve(DATA_DIR, "tle-cache.json"));
   await tleStore.load();
+
+  const satCatStore = new SatCatStore(resolve(DATA_DIR, "satcat-cache.json"));
+  await satCatStore.load();
 
   const app = express();
 
@@ -143,6 +148,29 @@ async function main(): Promise<void> {
   app.get("/api/aircraft", (_req, res) => res.json(poller.getSnapshot()));
   app.get("/api/status", (_req, res) => res.json(poller.getStatus()));
   app.get("/api/tle", async (_req, res) => res.json(await tleStore.get()));
+  app.get("/api/satcat", async (_req, res) => res.json(await satCatStore.get()));
+  // Resolve a 3-letter airport code to its city name (for the click-card's
+  // route display), a lighter-weight lookup than the full runway geometry.
+  app.get("/api/city", async (req, res) => {
+    const code = String(req.query.code ?? "").trim();
+    if (!code) return res.status(400).json({ error: "missing query parameter code" });
+    try {
+      res.json({ city: await lookupCity(code, DATA_DIR) });
+    } catch {
+      res.json({ city: code });
+    }
+  });
+  // Resolve a flight callsign (e.g. "SWA808") to the operating airline's
+  // full name, for the click-card. A miss just returns null, not an error.
+  app.get("/api/airline", async (req, res) => {
+    const callsign = String(req.query.callsign ?? "").trim();
+    if (!callsign) return res.status(400).json({ error: "missing query parameter callsign" });
+    try {
+      res.json({ name: await lookupAirlineByCallsign(callsign, DATA_DIR) });
+    } catch {
+      res.json({ name: null });
+    }
+  });
   app.post("/api/source", (req, res) => {
     const s = req.body?.source;
     if (s !== "radio" && s !== "api") {

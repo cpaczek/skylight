@@ -144,3 +144,38 @@ export async function lookupAirport(code: string, dataDir: string): Promise<Airp
   const iata = cIata >= 0 ? row[cIata] : "";
   return { icao: ident, name: iata || ident, fullName: row[cName], lat, lon, runways };
 }
+
+/**
+ * Resolve just the city name for a 3-letter IATA code (fast path for the
+ * click-card feature — no runway lookup needed). Falls back to the code
+ * itself on any miss so the UI never shows an empty string.
+ */
+export async function lookupCity(code: string, dataDir: string): Promise<string> {
+  const q = code.trim().toUpperCase();
+  if (!/^[A-Z0-9]{3,4}$/.test(q)) return code;
+
+  try {
+    const airportsCsv = await cachedCsv(dataDir, "airports.csv");
+    const lines = airportsCsv.split("\n");
+    const h = parseCsvLine(lines[0]);
+    const cIdent = h.indexOf("ident");
+    const cIcao = h.indexOf("icao_code");
+    const cIata = h.indexOf("iata_code");
+    const cCity = h.indexOf("municipality");
+
+    for (let i = 1; i < lines.length; i++) {
+      if (!lines[i].includes(q)) continue;
+      const r = parseCsvLine(lines[i]);
+      const isMatch =
+        r[cIdent] === q ||
+        (cIcao >= 0 && r[cIcao] === q) ||
+        (cIata >= 0 && r[cIata] === q);
+      if (isMatch && cCity >= 0 && r[cCity]) {
+        return r[cCity];
+      }
+    }
+  } catch {
+    /* fall through to code fallback below */
+  }
+  return code;
+}
