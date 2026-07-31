@@ -24,11 +24,13 @@ export interface SkyBody {
   kind: SkyKind;
   name?: string;
   id?: string;
+  noradId?: string;
   az: number; // degrees from North, clockwise
   alt: number; // degrees above horizon
   mag?: number;
   illum?: number; // moon lit fraction 0..1
   waning?: boolean;
+  altitudeKm?: number;
 }
 
 export interface Tle {
@@ -147,12 +149,17 @@ export function computeSky(date: Date, latDeg: number, lonDeg: number, o: SkyOpt
       const look = satellite.ecfToLookAngles(observerGd, ecf);
       const alt = look.elevation * R2D;
       if (alt < 0) continue; // below horizon
+      const gd = satellite.eciToGeodetic(pos, gmst);
+      const altitudeKm = gd.height; // km above WGS84 ellipsoid
       const isISS = /\bISS\b|\bZARYA\b/i.test(tle.name);
+      const noradIdMatch = tle.line1.match(/^1\s+(\d+)/);
       sky.sats.push({
         kind: isISS ? "iss" : "satellite",
         name: tle.name.replace(/\s*\(.*\)\s*$/, "").trim(),
+        noradId: noradIdMatch ? noradIdMatch[1] : undefined,
         az: norm360(look.azimuth * R2D),
         alt,
+        altitudeKm,
       });
     }
   }
