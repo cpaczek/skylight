@@ -246,6 +246,11 @@ export interface Config {
   // --- data source ---
   /** dump1090/readsb aircraft.json URL for the radio source. */
   radioUrl: string;
+  /** Aggregator URL for the api source, with {lat}/{lon}/{r} filled from the
+   *  current location and radius. Tunable because aggregators come and go —
+   *  airplanes.live went feeder-only mid-flight and took the no-radio path
+   *  down with it (#66). */
+  apiUrl: string;
 
   // --- calibration (tune against a real overhead pass) ---
   /** Rotate the whole field, degrees. */
@@ -353,6 +358,7 @@ export const DEFAULT_CONFIG: Config = {
   locationProfiles: [],
 
   radioUrl: "http://localhost:8080/data/aircraft.json",
+  apiUrl: "https://api.adsb.lol/v2/point/{lat}/{lon}/{r}",
 
   rotationDeg: 0,
   mirrorX: true,

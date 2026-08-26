@@ -6,7 +6,8 @@ import { dirname } from "node:path";
 import { DEFAULT_CONFIG, mergeConfig, type Config } from "@shared/index.js";
 
 type Listener = (config: Config) => void;
-const RADIO_URL_ERROR = "radioUrl must be an http or https URL";
+/** Config fields the control panel lets you point at an arbitrary host. */
+const URL_FIELDS = ["radioUrl", "apiUrl"] as const;
 
 export class ConfigValidationError extends Error {
   constructor(message: string) {
@@ -15,24 +16,30 @@ export class ConfigValidationError extends Error {
   }
 }
 
-function validateRadioUrl(radioUrl: unknown): void {
-  if (typeof radioUrl !== "string") {
-    throw new ConfigValidationError(RADIO_URL_ERROR);
+function validateUrlField(field: string, value: unknown): void {
+  const error = `${field} must be an http or https URL`;
+  if (typeof value !== "string") {
+    throw new ConfigValidationError(error);
   }
 
   try {
-    const { protocol } = new URL(radioUrl);
+    // The api URL carries {lat}/{lon}/{r} placeholders; they are legal path
+    // characters, so it parses fine unsubstituted.
+    const { protocol } = new URL(value);
     if (protocol === "http:" || protocol === "https:") return;
   } catch {
     // Fall through to the common validation error.
   }
 
-  throw new ConfigValidationError(RADIO_URL_ERROR);
+  throw new ConfigValidationError(error);
 }
 
 function validateConfigWrite(config: Partial<Config>): void {
-  if (config && Object.prototype.hasOwnProperty.call(config, "radioUrl")) {
-    validateRadioUrl(config.radioUrl);
+  if (!config) return;
+  for (const field of URL_FIELDS) {
+    if (Object.prototype.hasOwnProperty.call(config, field)) {
+      validateUrlField(field, config[field]);
+    }
   }
 }
 

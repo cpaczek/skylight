@@ -318,6 +318,15 @@ export function Control() {
               }}
             />
           </Row>
+          <Row label="API URL" hint="aggregator · {lat}/{lon}/{r}">
+            <TextInput
+              value={cfg.apiUrl}
+              ariaLabel="Aggregator API URL"
+              onCommit={(v) => {
+                if (v !== cfg.apiUrl) set({ apiUrl: v });
+              }}
+            />
+          </Row>
         </Section>
 
         <Section title="Units">

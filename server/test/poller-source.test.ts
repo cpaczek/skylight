@@ -12,7 +12,6 @@ const stubEnricher = { enrichSync: () => ({}) } as unknown as RouteEnricher;
 function makeOpts(over: Partial<PollerOptions>): PollerOptions {
   return {
     source: "api",
-    apiUrlTemplate: "https://api.example/{lat}/{lon}/{r}",
     pollMs: 1000,
     supplementApi: true,
     apiPollMs: 4000,

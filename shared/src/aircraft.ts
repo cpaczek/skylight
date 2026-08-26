@@ -1,5 +1,5 @@
 // Normalized aircraft model. The server maps both dump1090 (`aircraft.json`)
-// and the airplanes.live API into this single shape so the renderer never
+// and the aggregator APIs into this single shape so the renderer never
 // cares where the data came from.
 
 export interface Aircraft {

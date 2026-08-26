@@ -183,7 +183,7 @@ docker compose up -d --build
 # display:  http://<host>:3000/      ·  phone panel: http://<host>:3000/control
 ```
 
-Out of the box it uses the free **airplanes.live** API, so it runs with **no radio**.
+Out of the box it uses the free **adsb.lol** API, so it runs with **no radio**.
 To use your own ADS-B receiver, set `DATA_SOURCE=radio` and point `AIRCRAFT_JSON_URL`
 at an existing dump1090 / readsb / PiAware feed on your network (or just change the URL
 live from the control panel's **Source** section):
@@ -225,6 +225,9 @@ what's wrong, measured *from the server*:
   (`curl http://<host>:8080/data/aircraft.json` from the machine running Skylight).
 - `HTTP 429` - the public API is rate-limiting; Skylight now backs off automatically
   and recovers on its own. Planes hold position on screen through brief outages.
+- `HTTP 403` / `HTTP 401` on the *api* source - the aggregator has stopped serving the
+  public (this is what airplanes.live did). Pick another one: **API URL** in
+  `/control` → Source, values in [Aggregators](#aggregators).
 
 **Pointing at an existing dump1090 / readsb / PiAware feed.** Set the **Radio URL** in
 `/control` → Source to your feed's `aircraft.json` (dump1090-fa serves it at
@@ -255,6 +258,7 @@ fields:
 | `locationName` | Display name for the current location, shown in the control panel. |
 | `locationProfiles` | Saved places (favorite airports). Switch between them from the panel's **Location** section - tap **Save current** to store the active spot, then a chip to jump back to it. |
 | `radiusMiles` | How far out to show (default 3 - "what you could realistically see"). |
+| `radioUrl` / `apiUrl` | Where aircraft come from - your decoder's `aircraft.json`, and the aggregator used by the `api` source. Both live-editable from the panel's **Source** section (see [Aggregators](#aggregators)). |
 | `rotationDeg` / `mirrorX` | Calibration for the looking-up flip (tune against a real pass). |
 | `theme` | `ambient` · `telemetry` · `focus`. |
 | `showStars` / `showSun` / `showMoon` / `showSatellites` / `showPlanets` | Sky layer toggles. Planets (Venus, Jupiter, Mars, Saturn, Mercury) are drawn at their true positions, sized by brightness and labelled - so the display stays alive even with no traffic. |
@@ -273,12 +277,30 @@ geometry - turn off **Airport runways** if you've moved, or replace it in
 > (OpenStreetMap) service. Set `GEOCODE_USER_AGENT` to identify your deployment if you
 > use it heavily.
 
+### Aggregators
+
+The `api` source needs a public ADS-B aggregator. They all speak the same readsb JSON,
+so switching is one field - **API URL** in `/control` → Source - and it applies on the
+next poll, no rebuild. `{lat}`, `{lon}` and `{r}` (radius in nautical miles) are filled
+from your current location and range.
+
+| Provider | URL | Notes |
+|---|---|---|
+| [adsb.lol](https://adsb.lol/) | `https://api.adsb.lol/v2/point/{lat}/{lon}/{r}` | **Default.** Free, no key. |
+| [adsb.fi](https://adsb.fi/) | `https://opendata.adsb.fi/api/v2/lat/{lat}/lon/{lon}/dist/{r}` | Free, no key. Note the different path shape. |
+| [airplanes.live](https://airplanes.live/) | `https://api.airplanes.live/v2/point/{lat}/{lon}/{r}` | Feeders only since mid-2026 - returns `403` to everyone else. |
+
+These are volunteer-run, so please keep the poll rate polite (Skylight defaults to one
+request/second and backs off on `429`). Feeding a receiver back to whichever one you use
+is the nice thing to do - it's also how you keep access if they move to keyed APIs.
+
 ### Server environment
 
 | Env | Default | Meaning |
 |---|---|---|
-| `DATA_SOURCE` | `radio` | `radio` (dump1090) or `api` (airplanes.live) |
+| `DATA_SOURCE` | `radio` | `radio` (dump1090) or `api` (aggregator, no hardware) |
 | `AIRCRAFT_JSON_URL` | `http://localhost:8080/data/aircraft.json` | dump1090 feed |
+| `API_URL` | `https://api.adsb.lol/v2/point/{lat}/{lon}/{r}` | Aggregator for the `api` source. First-run default only - the control panel's **API URL** wins once set. See [Aggregators](#aggregators). |
 | `SUPPLEMENT_API` | `1` | When on radio, merge the API too (keeps landing aircraft alive) |
 | `PORT` / `HOST` | `3000` / `0.0.0.0` | HTTP + WebSocket |
 | `ALLOWED_HOSTS` | *(empty)* | Extra Host/Origin allowlist entries, comma-separated. Wildcards: `*.example.com`. Loopback, RFC1918 LAN, IPv6 ULA / link-local, and `*.local` are allowed by default. |
@@ -348,7 +370,7 @@ RTL-SDR ──USB──> dump1090-fa ──> aircraft.json (:8080)
 - ADS-B decode: [dump1090-fa](https://github.com/flightaware/dump1090) · RTL-SDR Blog
   [drivers](https://github.com/rtlsdrblog/rtl-sdr-blog)
 - Routes / aircraft enrichment: [adsbdb](https://www.adsbdb.com/) ·
-  fallback feed: [airplanes.live](https://airplanes.live/)
+  fallback feed: [adsb.lol](https://adsb.lol/) · [adsb.fi](https://adsb.fi/)
 - Satellite elements: [Celestrak](https://celestrak.org/) · airport data:
   [OurAirports](https://ourairports.com/)
 

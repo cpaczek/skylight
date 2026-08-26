@@ -1,5 +1,5 @@
 // SFO surface panel — "who's next": a mini airport diagram drawn from the
-// real runway geometry with live ground traffic from airplanes.live (via the
+// real runway geometry with live ground traffic from the aggregator (via the
 // server's sfoGround feed). Taxiing aircraft (the ones about to be overhead)
 // glow; parked/stationary traffic stays dim. Shown on the TV and the Twitch
 // stream layout; the vertical TikTok page doesn't render it.

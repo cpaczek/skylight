@@ -29,8 +29,7 @@ const HOST = process.env.HOST ?? "0.0.0.0";
 const SOURCE = (process.env.DATA_SOURCE as DataSource) ?? "radio";
 const RADIO_URL =
   process.env.AIRCRAFT_JSON_URL ?? "http://localhost:8080/data/aircraft.json";
-const API_URL =
-  process.env.API_URL ?? "https://api.airplanes.live/v2/point/{lat}/{lon}/{r}";
+const API_URL = process.env.API_URL ?? DEFAULT_CONFIG.apiUrl;
 const POLL_MS = Number(process.env.POLL_MS ?? 1000);
 const ROUTE_CACHE_HOURS = Number(process.env.ROUTE_CACHE_HOURS ?? 12);
 // When on radio, also poll the API and merge (keeps landing aircraft alive).
@@ -41,23 +40,33 @@ const GEOCODE_UA =
   process.env.GEOCODE_USER_AGENT ??
   "skylight/0.1 (https://github.com/cpaczek/skylight)";
 const CONFIG_PATH = resolve(DATA_DIR, "config.json");
-const SERVER_DEFAULT_CONFIG: Config = { ...DEFAULT_CONFIG, radioUrl: RADIO_URL };
+const SERVER_DEFAULT_CONFIG: Config = {
+  ...DEFAULT_CONFIG,
+  radioUrl: RADIO_URL,
+  apiUrl: API_URL,
+};
 
-function hasPersistedRadioUrl(path: string): boolean {
+/** Did the operator already set this URL from the control panel? If so it wins
+ *  over the environment, which is only ever a first-run default. */
+function hasPersistedUrl(path: string, field: "radioUrl" | "apiUrl"): boolean {
   try {
     const raw = JSON.parse(readFileSync(path, "utf8")) as Partial<Config>;
-    return typeof raw.radioUrl === "string";
+    return typeof raw[field] === "string";
   } catch {
     return false;
   }
 }
 
 async function main(): Promise<void> {
-  const configHasRadioUrl = hasPersistedRadioUrl(CONFIG_PATH);
+  const configHasRadioUrl = hasPersistedUrl(CONFIG_PATH, "radioUrl");
+  const configHasApiUrl = hasPersistedUrl(CONFIG_PATH, "apiUrl");
   const store = new ConfigStore(CONFIG_PATH, SERVER_DEFAULT_CONFIG);
   await store.load();
   if (!configHasRadioUrl && store.get().radioUrl !== RADIO_URL) {
     store.patch({ radioUrl: RADIO_URL });
+  }
+  if (!configHasApiUrl && store.get().apiUrl !== API_URL) {
+    store.patch({ apiUrl: API_URL });
   }
 
   const enricher = new RouteEnricher(
@@ -115,7 +124,6 @@ async function main(): Promise<void> {
 
   const poller = new Poller({
     source: SOURCE,
-    apiUrlTemplate: API_URL,
     pollMs: POLL_MS,
     supplementApi: SUPPLEMENT_API,
     apiPollMs: API_POLL_MS,
@@ -125,10 +133,12 @@ async function main(): Promise<void> {
     onStatus: (status) => hub.broadcastStatus(status),
   });
 
-  // SFO surface traffic (airplanes.live) — the "who's next" panel on the TV
-  // and Twitch stream. Local receiver can't hear ground targets at 13 mi.
-  const sfoGround = new SfoGroundPoller((at, aircraft) =>
-    hub.broadcastSfoGround(at, aircraft),
+  // SFO surface traffic (via the configured aggregator) — the "who's next"
+  // panel on the TV and Twitch stream. Local receiver can't hear ground
+  // targets at 13 mi.
+  const sfoGround = new SfoGroundPoller(
+    (at, aircraft) => hub.broadcastSfoGround(at, aircraft),
+    () => store.get().apiUrl,
   );
 
   // --- REST API (handy for debugging + non-WS clients) ---
@@ -225,7 +235,12 @@ async function main(): Promise<void> {
 
   server.listen(PORT, HOST, () => {
     console.log(`[server] listening on http://${HOST}:${PORT}`);
-    console.log(`[server] data source: ${SOURCE} (${SOURCE === "radio" ? RADIO_URL : API_URL})`);
+    // Report the URL actually in force — a persisted control-panel value beats
+    // the environment default, and the log is where people go to check.
+    const cfg = store.get();
+    console.log(
+      `[server] data source: ${SOURCE} (${SOURCE === "radio" ? cfg.radioUrl : cfg.apiUrl})`,
+    );
     console.log(`[server] control panel: http://<this-host>:${PORT}/control`);
     console.log(`[server] host allowlist: ${hostMatcher.describe()}`);
   });

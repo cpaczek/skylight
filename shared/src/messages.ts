@@ -16,7 +16,7 @@ export interface SourceStatus {
   message?: string;
 }
 
-/** An aircraft on the airport surface (from the airplanes.live area API). */
+/** An aircraft on the airport surface (from the aggregator's area API). */
 export interface GroundAircraft {
   hex: string;
   /** Callsign, trimmed. */
