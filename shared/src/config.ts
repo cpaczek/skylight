@@ -358,7 +358,7 @@ export const DEFAULT_CONFIG: Config = {
   locationProfiles: [],
 
   radioUrl: "http://localhost:8080/data/aircraft.json",
-  apiUrl: "https://api.adsb.lol/v2/point/{lat}/{lon}/{r}",
+  apiUrl: "https://opendata.adsb.fi/api/v3/lat/{lat}/lon/{lon}/dist/{r}",
 
   rotationDeg: 0,
   mirrorX: true,

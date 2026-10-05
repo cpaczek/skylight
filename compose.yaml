@@ -3,7 +3,7 @@
 #   docker compose up -d --build
 #   open http://<host>:3000/        (display)  ·  /control  (phone panel)
 #
-# Out of the box this uses the free adsb.lol API so it runs with no radio. Set
+# Out of the box this uses the free adsb.fi API so it runs with no radio. Set
 # API_URL to use a different aggregator (see the README's Aggregators table).
 # To use your own ADS-B receiver, set DATA_SOURCE=radio and point AIRCRAFT_JSON_URL
 # at an existing dump1090/readsb feed on your network (you can also change either

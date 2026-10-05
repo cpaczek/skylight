@@ -12,7 +12,7 @@
 // the last snapshot — the panel just shows slightly stale dots.
 
 import type { GroundAircraft } from "@shared/index.js";
-import { API_USER_AGENT, buildPointUrl } from "./datasource.js";
+import { API_USER_AGENT, buildPointUrl, type AggregatorGate } from "./datasource.js";
 
 const SFO_LAT = 37.6213;
 const SFO_LON = -122.379;
@@ -43,6 +43,9 @@ export class SfoGroundPoller {
     /** The live config.apiUrl template — read per poll so a provider change
      *  from the control panel takes effect without a restart. */
     private getApiUrl: () => string,
+    /** Shared with the main poller so the two never hit the aggregator in
+     *  the same second. */
+    private gate: AggregatorGate,
   ) {}
 
   /** Latest snapshot for late-joining clients (null until first success). */
@@ -64,13 +67,14 @@ export class SfoGroundPoller {
   private async poll(): Promise<void> {
     try {
       const url = buildPointUrl(this.getApiUrl(), SFO_LAT, SFO_LON, RADIUS_NM);
+      await this.gate.wait();
       const res = await fetch(url, {
         headers: { "User-Agent": API_USER_AGENT },
         signal: AbortSignal.timeout(5000),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      // Aggregators disagree on the list key: adsb.lol says "ac", adsb.fi and
-      // dump1090 say "aircraft".
+      // Aggregators disagree on the list key: adsb.lol and adsb.fi's v3 say
+      // "ac", adsb.fi's v2 and dump1090 say "aircraft".
       const body = (await res.json()) as {
         ac?: RawGroundAircraft[];
         aircraft?: RawGroundAircraft[];

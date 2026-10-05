@@ -10,7 +10,7 @@ import express from "express";
 import { DEFAULT_CONFIG, type Config, type DataSource } from "@shared/index.js";
 import { ConfigStore, ConfigValidationError } from "./config-store.js";
 import { RouteEnricher } from "./enrich/routes.js";
-import { Poller } from "./datasource.js";
+import { AggregatorGate, Poller } from "./datasource.js";
 import { Hub } from "./hub.js";
 import { TleStore } from "./tle.js";
 import { SatCatStore } from "./satcat.js";
@@ -122,11 +122,15 @@ async function main(): Promise<void> {
     },
   });
 
+  // Everything that calls the aggregator shares its rate limit, so it shares
+  // one gate too.
+  const aggregatorGate = new AggregatorGate();
   const poller = new Poller({
     source: SOURCE,
     pollMs: POLL_MS,
     supplementApi: SUPPLEMENT_API,
     apiPollMs: API_POLL_MS,
+    gate: aggregatorGate,
     getConfig: () => store.get(),
     enricher,
     onSnapshot: (now, aircraft) => hub.broadcastAircraft(now, aircraft),
@@ -139,6 +143,7 @@ async function main(): Promise<void> {
   const sfoGround = new SfoGroundPoller(
     (at, aircraft) => hub.broadcastSfoGround(at, aircraft),
     () => store.get().apiUrl,
+    aggregatorGate,
   );
 
   // --- REST API (handy for debugging + non-WS clients) ---

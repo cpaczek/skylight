@@ -4,7 +4,7 @@ import { Poller, type PollerOptions } from "../src/datasource.js";
 import type { RouteEnricher } from "../src/enrich/routes.js";
 
 // Regression test for #15: when the API is the *primary* source, the supplement
-// timer must not also poll it — the double request rate trips airplanes.live's
+// timer must not also poll it — the double request rate trips the aggregator's
 // rate limit and makes aircraft flicker out and back.
 
 const stubEnricher = { enrichSync: () => ({}) } as unknown as RouteEnricher;
@@ -45,8 +45,9 @@ describe("Poller supplement-timer lifecycle (#15)", () => {
     poller.start();
     await vi.advanceTimersByTimeAsync(4100); // 4 primary ticks, 0 supplement ticks
     poller.stop();
-    // 1 immediate + 4 interval ticks = 5; a stray supplement timer would add more.
-    expect(fetchSpy).toHaveBeenCalledTimes(5);
+    // The api source is polled every other tick (0s, 2s, 4s) = 3; a stray
+    // supplement timer would add more.
+    expect(fetchSpy).toHaveBeenCalledTimes(3);
   });
 
   it("runs the supplement timer only while radio is primary", async () => {
@@ -61,7 +62,8 @@ describe("Poller supplement-timer lifecycle (#15)", () => {
     fetchSpy.mockClear();
     await vi.advanceTimersByTimeAsync(4100);
     poller.stop();
-    // 4 primary interval ticks over 4100ms; a live supplement timer would add ~1 more.
-    expect(fetchSpy).toHaveBeenCalledTimes(4);
+    // Primary api polls at 1s and 3s over 4100ms; a live supplement timer
+    // would add 1 more at 4s.
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
   });
 });

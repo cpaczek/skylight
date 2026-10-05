@@ -6,7 +6,7 @@
 #
 # No radio in the container: point it at an existing dump1090/readsb feed with
 # AIRCRAFT_JSON_URL (now runtime-tunable from the control panel too), or run with
-# DATA_SOURCE=api to use a free aggregator feed (adsb.lol by default, API_URL to
+# DATA_SOURCE=api to use a free aggregator feed (adsb.fi by default, API_URL to
 # change it) with no hardware at all.
 
 FROM node:22-bookworm-slim

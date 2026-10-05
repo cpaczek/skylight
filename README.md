@@ -183,7 +183,7 @@ docker compose up -d --build
 # display:  http://<host>:3000/      ·  phone panel: http://<host>:3000/control
 ```
 
-Out of the box it uses the free **adsb.lol** API, so it runs with **no radio**.
+Out of the box it uses the free **adsb.fi** API, so it runs with **no radio**.
 To use your own ADS-B receiver, set `DATA_SOURCE=radio` and point `AIRCRAFT_JSON_URL`
 at an existing dump1090 / readsb / PiAware feed on your network (or just change the URL
 live from the control panel's **Source** section):
@@ -286,13 +286,14 @@ from your current location and range.
 
 | Provider | URL | Notes |
 |---|---|---|
-| [adsb.lol](https://adsb.lol/) | `https://api.adsb.lol/v2/point/{lat}/{lon}/{r}` | **Default.** Free, no key. |
-| [adsb.fi](https://adsb.fi/) | `https://opendata.adsb.fi/api/v2/lat/{lat}/lon/{lon}/dist/{r}` | Free, no key. Note the different path shape. |
-| [airplanes.live](https://airplanes.live/) | `https://api.airplanes.live/v2/point/{lat}/{lon}/{r}` | Feeders only since mid-2026 - returns `403` to everyone else. |
+| [adsb.fi](https://adsb.fi/) | `https://opendata.adsb.fi/api/v3/lat/{lat}/lon/{lon}/dist/{r}` | **Default.** Free, no key, for personal non-commercial use. Allows 1 request/second. |
+| [adsb.lol](https://adsb.lol/) | `https://api.adsb.lol/v2/point/{lat}/{lon}/{r}` | Free, no key (one is planned, earned by feeding). Its rate limit moves with load and was too tight for a live display when tested in October 2026 - expect `429` pauses. |
+| [airplanes.live](https://airplanes.live/) | `https://api.airplanes.live/v2/point/{lat}/{lon}/{r}` | Feeders only since August 2026 - returns `403` to everyone else. |
 
-These are volunteer-run, so please keep the poll rate polite (Skylight defaults to one
-request/second and backs off on `429`). Feeding a receiver back to whichever one you use
-is the nice thing to do - it's also how you keep access if they move to keyed APIs.
+These are volunteer-run, so Skylight keeps the poll rate polite: the aggregator is asked
+at most once every 2 seconds however fast the radio is polled, and a `429` backs it off
+for 15 seconds. Feeding a receiver back to whichever one you use is the nice thing to
+do - it's also how you keep access if they move to keyed APIs.
 
 ### Server environment
 
@@ -300,7 +301,7 @@ is the nice thing to do - it's also how you keep access if they move to keyed AP
 |---|---|---|
 | `DATA_SOURCE` | `radio` | `radio` (dump1090) or `api` (aggregator, no hardware) |
 | `AIRCRAFT_JSON_URL` | `http://localhost:8080/data/aircraft.json` | dump1090 feed |
-| `API_URL` | `https://api.adsb.lol/v2/point/{lat}/{lon}/{r}` | Aggregator for the `api` source. First-run default only - the control panel's **API URL** wins once set. See [Aggregators](#aggregators). |
+| `API_URL` | `https://opendata.adsb.fi/api/v3/lat/{lat}/lon/{lon}/dist/{r}` | Aggregator for the `api` source. First-run default only - the control panel's **API URL** wins once set. See [Aggregators](#aggregators). |
 | `SUPPLEMENT_API` | `1` | When on radio, merge the API too (keeps landing aircraft alive) |
 | `PORT` / `HOST` | `3000` / `0.0.0.0` | HTTP + WebSocket |
 | `ALLOWED_HOSTS` | *(empty)* | Extra Host/Origin allowlist entries, comma-separated. Wildcards: `*.example.com`. Loopback, RFC1918 LAN, IPv6 ULA / link-local, and `*.local` are allowed by default. |
@@ -370,7 +371,7 @@ RTL-SDR ──USB──> dump1090-fa ──> aircraft.json (:8080)
 - ADS-B decode: [dump1090-fa](https://github.com/flightaware/dump1090) · RTL-SDR Blog
   [drivers](https://github.com/rtlsdrblog/rtl-sdr-blog)
 - Routes / aircraft enrichment: [adsbdb](https://www.adsbdb.com/) ·
-  fallback feed: [adsb.lol](https://adsb.lol/) · [adsb.fi](https://adsb.fi/)
+  fallback feed: [adsb.fi](https://adsb.fi/) · [adsb.lol](https://adsb.lol/)
 - Satellite elements: [Celestrak](https://celestrak.org/) · airport data:
   [OurAirports](https://ourairports.com/)
 

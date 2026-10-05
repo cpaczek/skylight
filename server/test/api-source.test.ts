@@ -1,6 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DEFAULT_CONFIG, type Config } from "@shared/index.js";
-import { API_USER_AGENT, Poller, type PollerOptions } from "../src/datasource.js";
+import {
+  AggregatorGate,
+  API_MIN_POLL_MS,
+  API_USER_AGENT,
+  Poller,
+  type PollerOptions,
+} from "../src/datasource.js";
 import type { RouteEnricher } from "../src/enrich/routes.js";
 import { ConfigStore, ConfigValidationError } from "../src/config-store.js";
 
@@ -97,7 +103,7 @@ describe("aggregator API source (#66)", () => {
     expect(String(fetchSpy.mock.calls[0]?.[0])).toContain("first.example");
 
     config = withConfig({ apiUrl: "https://second.example/{lat}/{lon}/{r}" });
-    await vi.advanceTimersByTimeAsync(1000);
+    await vi.advanceTimersByTimeAsync(API_MIN_POLL_MS);
     poller.stop();
     expect(String(fetchSpy.mock.calls.at(-1)?.[0])).toContain("second.example");
   });
@@ -137,6 +143,64 @@ describe("aggregator API source (#66)", () => {
     await vi.advanceTimersByTimeAsync(5000);
     poller.stop();
     expect(rateLimited).toHaveBeenCalledTimes(1);
+  });
+
+  it("polls the aggregator every 2s, not at the 1s radio rate", async () => {
+    // adsb.fi allows 1 request/second and adsb.lol less: at the radio rate
+    // every request after the first came back 429.
+    const poller = new Poller(
+      makeOpts(withConfig({ apiUrl: "https://api.example/{lat}/{lon}/{r}" })),
+    );
+    poller.start();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+    await vi.advanceTimersByTimeAsync(4000);
+    poller.stop();
+    expect(fetchSpy).toHaveBeenCalledTimes(4);
+  });
+
+  it("does not hold a new provider to the old one's rate-limit backoff", async () => {
+    const byHost = vi.fn(async (url: string) => {
+      const limited = url.includes("limited.example");
+      return { ok: !limited, status: limited ? 429 : 200, json: async () => ({ ac: [] }) };
+    });
+    vi.stubGlobal("fetch", byHost);
+    let config = withConfig({ apiUrl: "https://limited.example/{lat}/{lon}/{r}" });
+    const poller = new Poller(makeOpts(config, { getConfig: () => config }));
+    poller.start();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(byHost).toHaveBeenCalledTimes(1);
+
+    // Well inside the 15s backoff the 429 started.
+    config = withConfig({ apiUrl: "https://open.example/{lat}/{lon}/{r}" });
+    await vi.advanceTimersByTimeAsync(API_MIN_POLL_MS);
+    poller.stop();
+    expect(String(byHost.mock.calls.at(-1)?.[0])).toContain("open.example");
+  });
+
+  it("spaces out requests that share the aggregator's rate limit", async () => {
+    // The feed and the SFO ground panel tick independently; fired together,
+    // the second must wait rather than land in the same second.
+    const gate = new AggregatorGate();
+    const sent: number[] = [];
+    const start = Date.now();
+    const request = async () => {
+      await gate.wait();
+      sent.push(Date.now() - start);
+    };
+    void request();
+    void request();
+    void request();
+    await vi.advanceTimersByTimeAsync(5000);
+
+    expect(sent).toHaveLength(3);
+    expect(sent[0]).toBe(0);
+    expect(sent[1] - sent[0]).toBeGreaterThanOrEqual(1000);
+    expect(sent[2] - sent[1]).toBeGreaterThanOrEqual(1000);
   });
 
   it("identifies itself, which adsb.lol requires (403 without it)", async () => {
