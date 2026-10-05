@@ -22,9 +22,18 @@ case "$ARCH" in
     exit 1
     ;;
 esac
-# Receiver reference position (set to your location). Defaults to SFO.
-LAT="${LAT:-37.6213}"
-LON="${LON:--122.379}"
+# Receiver position for dump1090 - optional, and there is deliberately no
+# default. dump1090 discards every position more than 300 NM from the location
+# it is given, so a wrong one (this used to fall back to SFO) leaves aircraft
+# with no lat/lon anywhere else: counted in /control, never drawn (#66). Set
+# both to your location for a faster first fix; the display's own location is
+# set separately in /control.
+LAT="${LAT:-}"
+LON="${LON:-}"
+if { [ -n "$LAT" ] && [ -z "$LON" ]; } || { [ -z "$LAT" ] && [ -n "$LON" ]; }; then
+  echo "ERROR: set both LAT and LON, or neither." >&2
+  exit 1
+fi
 
 echo "==> apt update + base packages"
 sudo apt-get update
@@ -52,7 +61,7 @@ EOF
 sudo udevadm control --reload-rules && sudo udevadm trigger || true
 sudo modprobe -r dvb_usb_rtl28xxu 2>/dev/null || true
 
-echo "==> dump1090-fa (FlightAware decoder + SkyAware map on :8080)"
+echo "==> dump1090-fa (FlightAware decoder, aircraft.json on :8080)"
 if ! command -v dump1090-fa >/dev/null 2>&1; then
   # FlightAware publishes a piaware/dump1090 apt repo; build from source as a
   # portable fallback that also serves JSON via lighttpd-free --write-json.
@@ -61,6 +70,16 @@ if ! command -v dump1090-fa >/dev/null 2>&1; then
   git clone --depth 1 https://github.com/flightaware/dump1090 "$SRC"
   make -C "$SRC" RTLSDR=yes
   sudo install -m755 "$SRC/dump1090" /usr/local/bin/dump1090-fa
+fi
+# Our source build lives in /usr/local/bin; a packaged dump1090-fa (PiAware)
+# brings its own service and web server, so that one is left alone. The units
+# are rewritten on every run, so re-running the installer applies a new
+# LAT/LON and repairs an older install.
+if [ -x /usr/local/bin/dump1090-fa ]; then
+  LOCATION_ARGS=""
+  if [ -n "$LAT" ]; then
+    LOCATION_ARGS="--lat $LAT --lon $LON "
+  fi
   # Minimal service: decode + write JSON where the tracker server expects it.
   sudo mkdir -p /run/dump1090-fa
   sudo tee /etc/systemd/system/dump1090-fa.service >/dev/null <<EOF
@@ -69,19 +88,23 @@ Description=dump1090-fa ADS-B decoder
 After=network.target
 [Service]
 ExecStartPre=/bin/mkdir -p /run/dump1090-fa
-ExecStart=/usr/local/bin/dump1090-fa --device-type rtlsdr --lat $LAT --lon $LON --write-json /run/dump1090-fa --write-json-every 1 --quiet
+ExecStart=/usr/local/bin/dump1090-fa --device-type rtlsdr ${LOCATION_ARGS}--write-json /run/dump1090-fa --write-json-every 1 --quiet
 Restart=always
 RestartSec=3
 [Install]
 WantedBy=multi-user.target
 EOF
-  # Serve /run/dump1090-fa at :8080/data/ via a tiny static server.
+  # Serve /run/dump1090-fa on :8080 via a tiny static server. The data symlink
+  # puts the files at /data/aircraft.json - where dump1090's own web server has
+  # them and where Skylight looks by default - as well as at /aircraft.json,
+  # which installs from before the default changed still point at.
   sudo tee /etc/systemd/system/dump1090-json.service >/dev/null <<EOF
 [Unit]
 Description=Serve dump1090 aircraft.json on :8080
 After=dump1090-fa.service
 [Service]
 ExecStartPre=/bin/mkdir -p /run/dump1090-fa
+ExecStartPre=/bin/ln -sfn . /run/dump1090-fa/data
 ExecStart=/usr/bin/python3 -m http.server 8080 --directory /run/dump1090-fa
 Restart=always
 RestartSec=2
@@ -89,7 +112,8 @@ RestartSec=2
 WantedBy=multi-user.target
 EOF
   sudo systemctl daemon-reload
-  sudo systemctl enable --now dump1090-fa.service dump1090-json.service
+  sudo systemctl enable dump1090-fa.service dump1090-json.service
+  sudo systemctl restart dump1090-fa.service dump1090-json.service
 fi
 
 echo "==> Node.js + pnpm (via corepack)"
@@ -123,5 +147,10 @@ echo "Done."
 echo "  Display : http://localhost:3000/  (point Chromium kiosk here — see setup-kiosk.sh)"
 echo "  Control : http://$IP:3000/control  (open on your phone)"
 echo "  Decoder : http://$IP:8080/data/aircraft.json  (raw decoded feed)"
+if [ -n "$LAT" ]; then
+  echo "  Receiver: $LAT, $LON"
+else
+  echo "  Receiver: position not set (optional - re-run with LAT=.. LON=.. to set it)"
+fi
 echo
 echo "Verify decode first:  rtl_test -t   then   curl -s localhost:8080/data/aircraft.json | head"

@@ -229,6 +229,15 @@ what's wrong, measured *from the server*:
   public (this is what airplanes.live did). Pick another one: **API URL** in
   `/control` → Source, values in [Aggregators](#aggregators).
 
+**Aircraft are counted in `/control` but none are drawn.** They are being heard without
+a position. Check the feed: `curl -s <radio url> | grep -c '"lat"'`. If that prints `0`
+while the list has aircraft in it, the decoder was started with the wrong receiver
+location - dump1090 discards every position more than 300 NM from its `--lat`/`--lon`.
+Older versions of `pi-setup/install-on-pi.sh` set that to SFO unless told otherwise;
+pull and re-run the installer to clear it (changing the location in `/control` moves
+the display, not the decoder). If positions are present, check the **Location** and
+**Radius** in `/control` instead.
+
 **Pointing at an existing dump1090 / readsb / PiAware feed.** Set the **Radio URL** in
 `/control` → Source to your feed's `aircraft.json` (dump1090-fa serves it at
 `http://<host>:8080/data/aircraft.json`) and switch the source to *radio*. No rebuild

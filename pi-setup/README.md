@@ -47,12 +47,19 @@ Copy the repo to the Pi and run the installer:
 ```bash
 git clone https://github.com/cpaczek/skylight.git ~/skylight   # or rsync it over
 cd ~/skylight
-LAT=37.6213 LON=-122.379 ./pi-setup/install-on-pi.sh            # set your coordinates
+./pi-setup/install-on-pi.sh
 ```
 
 Installs the rtl-sdr-blog V4 driver (+ DVB-T blacklist), dump1090-fa, Node + pnpm,
 builds the app, and enables the `skylight-server` service. **Verify decode first** with
 `rtl_test -t` and `curl -s localhost:8080/data/aircraft.json | head` before moving on.
+
+Optionally tell the decoder where the receiver is, for a faster first fix on each
+aircraft: `LAT=33.94 LON=-84.52 ./pi-setup/install-on-pi.sh` (your own coordinates).
+Get this right or leave it out - dump1090 throws away every position more than 300 NM
+from the location it is given. The installer is safe to re-run, which is also how you
+change or remove the position later. This is separate from the display's location,
+which you set in `/control`.
 
 ## 3. Kiosk display - on the Pi
 
