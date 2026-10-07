@@ -55,6 +55,7 @@ if command -v labwc >/dev/null 2>&1; then
   echo "==> labwc detected; kiosk added to $AUTOSTART"
 elif command -v wayfire >/dev/null 2>&1; then
   INI="$HOME/.config/wayfire.ini"
+  mkdir -p "$(dirname "$INI")"
   touch "$INI"
   if ! grep -q "\[autostart\]" "$INI"; then printf "\n[autostart]\n" >> "$INI"; fi
   grep -q skylight-kiosk "$INI" || sed -i "/\[autostart\]/a skylight = $LAUNCH" "$INI"
