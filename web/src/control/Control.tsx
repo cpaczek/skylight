@@ -6,6 +6,7 @@ import { CONSTELLATIONS } from "@shared/stars.js";
 import { geoAvailability, geoErrorMessage } from "../lib/geolocation.js";
 import { useStream } from "../lib/useStream.js";
 import { nextISSPass, type Tle } from "../display/celestial.js";
+import { nextSkyEvent } from "../display/skyEvents.js";
 import { labelLines } from "../display/renderer.js";
 import { ColorRow, Row, Section, Segmented, Slider, TextInput, Toggle } from "./components.js";
 
@@ -20,6 +21,18 @@ function fmtIn(ms: number): string {
   if (m < 60) return `${m}m`;
   return `${Math.floor(m / 60)}h ${m % 60}m`;
 }
+
+// Sky events can be minutes (a late ISS-style pass) to months (a solstice) out,
+// so this reads in the largest sensible unit rather than always minutes.
+function fmtUntil(ms: number): string {
+  const m = Math.max(0, Math.round(ms / 60000));
+  if (m < 60) return `${m}m`;
+  const h = Math.round(m / 60);
+  if (h < 48) return `${h}h`;
+  return `${Math.round(h / 24)}d`;
+}
+
+const SKY_TIME_MAX_MIN = 720; // the sky-time slider spans +/- 12h; jumps must fit it
 
 const FIELD_LABELS: Record<keyof ShowFields, string> = {
   name: "Name",
@@ -58,6 +71,12 @@ export function Control() {
   const nextPass = useMemo(
     () => (tles.length && cfg ? nextISSPass(Date.now(), cfg.centerLat, cfg.centerLon, tles) : null),
     [tles, cfg?.centerLat, cfg?.centerLon],
+  );
+
+  // Soonest "look up" sky event (moon phase, eclipse, meteor shower, …) for the nudge chip.
+  const skyEvent = useMemo(
+    () => (cfg?.showSkyEvents ? nextSkyEvent(Date.now(), cfg.centerLat, cfg.centerLon) : null),
+    [cfg?.showSkyEvents, cfg?.centerLat, cfg?.centerLon],
   );
 
   if (!cfg) {
@@ -585,6 +604,9 @@ export function Control() {
           <Row label="Planets" hint="Venus, Jupiter, Mars…">
             <Toggle value={cfg.showPlanets} onChange={(v) => set({ showPlanets: v })} />
           </Row>
+          <Row label="Sky events" hint="look up: moon, eclipses, meteors">
+            <Toggle value={cfg.showSkyEvents} onChange={(v) => set({ showSkyEvents: v })} />
+          </Row>
           <Row label="Sky time" hint={skyTimeLabel(cfg.skyTimeOffsetMin)}>
             <Slider id="skyTimeOffsetMin" value={cfg.skyTimeOffsetMin} min={-720} max={720} step={5} unit="min"
               onChange={(v) => set({ skyTimeOffsetMin: v })} />
@@ -600,6 +622,18 @@ export function Control() {
                 ISS pass in {fmtIn(nextPass - Date.now())} → jump
               </button>
             )}
+            {skyEvent && (() => {
+              const offMin = Math.round((skyEvent.timeMs - Date.now()) / 60000);
+              const canJump = offMin > 0 && offMin <= SKY_TIME_MAX_MIN;
+              const text = `${skyEvent.label} in ${fmtUntil(skyEvent.timeMs - Date.now())}${skyEvent.detail ? ` · ${skyEvent.detail}` : ""}`;
+              return canJump ? (
+                <button className="chip on" onClick={() => set({ skyTimeOffsetMin: offMin })}>
+                  {text} → jump
+                </button>
+              ) : (
+                <span className="chip" title="Beyond the 12h sky-time window">{text}</span>
+              );
+            })()}
           </div>
         </Section>
 
