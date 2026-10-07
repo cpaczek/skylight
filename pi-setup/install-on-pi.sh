@@ -167,6 +167,25 @@ sudo sed \
 sudo systemctl daemon-reload
 sudo systemctl enable --now skylight-server.service
 
+# Nightly self-update (git checkouts only): fast-forward to the release branch,
+# rebuild, restart. AUTO_UPDATE=0 skips it; disable later with
+#   sudo systemctl disable --now skylight-update.timer
+echo "==> nightly self-update timer"
+if [ -d "$APPDIR/.git" ] && [ "${AUTO_UPDATE:-1}" != "0" ]; then
+  sudo sed \
+    -e "s#__USER__#$USER_NAME#g" \
+    -e "s#__APPDIR__#$APPDIR#g" \
+    -e "s#__HOME__#$HOME#g" \
+    "$APPDIR/pi-setup/skylight-update.service" \
+    | sudo tee /etc/systemd/system/skylight-update.service >/dev/null
+  sudo cp "$APPDIR/pi-setup/skylight-update.timer" /etc/systemd/system/skylight-update.timer
+  sudo systemctl daemon-reload
+  sudo systemctl enable --now skylight-update.timer
+  echo "   enabled (follows the ${SKYLIGHT_BRANCH:-release} branch nightly)"
+else
+  echo "   skipped (not a git checkout, or AUTO_UPDATE=0)"
+fi
+
 # Give the Pi a predictable name so the phone URL is always
 # http://skylight.local:3000/control, whichever way the card was prepared.
 # Only the stock name is replaced; a name the owner chose is left alone.

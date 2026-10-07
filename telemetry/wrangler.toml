@@ -1,0 +1,18 @@
+# Skylight usage ping + site page-view counter. Deploy: npx wrangler deploy
+name = "skylight-telemetry"
+main = "src/index.ts"
+compatibility_date = "2026-09-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "skylight-telemetry"
+database_id = "08dec388-c524-4e6c-a42c-c658a99359ea"
+
+[vars]
+SITE_ORIGIN = "https://skylightceiling.com"
+
+# Secrets (npx wrangler secret put ...): STATS_KEY — bearer key for /stats and /settings.
+
+[[routes]]
+pattern = "telemetry.skylightceiling.com"
+custom_domain = true

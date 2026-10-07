@@ -11,6 +11,7 @@ import { DEFAULT_CONFIG, type Config, type DataSource } from "@shared/index.js";
 import { ConfigStore, ConfigValidationError } from "./config-store.js";
 import { RouteEnricher } from "./enrich/routes.js";
 import { AggregatorGate, Poller } from "./datasource.js";
+import { startTelemetry } from "./telemetry.js";
 import { Hub } from "./hub.js";
 import { TleStore } from "./tle.js";
 import { SatCatStore } from "./satcat.js";
@@ -248,6 +249,13 @@ async function main(): Promise<void> {
     );
     console.log(`[server] control panel: http://<this-host>:${PORT}/control`);
     console.log(`[server] host allowlist: ${hostMatcher.describe()}`);
+    startTelemetry({
+      store,
+      source: SOURCE,
+      url: process.env.TELEMETRY_URL,
+      enabled: process.env.SKYLIGHT_TELEMETRY !== "0",
+      packageVersion: process.env.npm_package_version,
+    });
   });
 }
 

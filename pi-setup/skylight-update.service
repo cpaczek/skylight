@@ -1,0 +1,14 @@
+# Runs pi-setup/skylight-update.sh (see skylight-update.timer for when).
+[Unit]
+Description=Skylight nightly self-update
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=__USER__
+WorkingDirectory=__APPDIR__
+Environment=HOME=__HOME__
+Environment=APPDIR=__APPDIR__
+Environment=CI=true
+ExecStart=__APPDIR__/pi-setup/skylight-update.sh

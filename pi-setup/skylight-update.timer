@@ -1,0 +1,12 @@
+# Nightly, at a random moment between 04:00 and 07:00 local time, so thousands
+# of Pis don't hit GitHub in the same second. Missed runs catch up at boot.
+[Unit]
+Description=Skylight nightly self-update
+
+[Timer]
+OnCalendar=*-*-* 04:00:00
+RandomizedDelaySec=3h
+Persistent=true
+
+[Install]
+WantedBy=timers.target

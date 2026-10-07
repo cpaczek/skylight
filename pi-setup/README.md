@@ -104,6 +104,13 @@ From your phone open `http://skylight.local:3000/control` and tune **rotation** 
 against a real overhead pass until the ceiling tracks the sky (it's a calibration, not a
 formula - you're projecting up and looking up).
 
+## Self-update
+
+The installer enables `skylight-update.timer` on git checkouts: nightly fetch of
+the `release` branch, fast-forward, `pnpm install && pnpm build`, service
+restart; a failed build rolls back. `journalctl -u skylight-update` shows what
+happened. Disable with `sudo systemctl disable --now skylight-update.timer`.
+
 ## Pushing updates
 
 From your dev machine, after editing code:
@@ -122,3 +129,4 @@ PI_HOST=skylight.local ./scripts/deploy-to-pi.sh
 | `install-on-pi.sh` | the Pi | driver + decoder + Node + app + server service |
 | `skylight-server.service` | the Pi | systemd unit template for the server |
 | `setup-kiosk.sh` | the Pi | Chromium kiosk autostart, screen blanking off, HDMI forced on |
+| `skylight-update.sh` + `.service` + `.timer` | the Pi | nightly self-update from the `release` branch |

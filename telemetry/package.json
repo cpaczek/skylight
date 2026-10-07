@@ -1,0 +1,16 @@
+{
+  "name": "skylight-telemetry",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Cloudflare Worker: anonymous usage ping for Skylight installs and page views for skylightceiling.com",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "schema": "wrangler d1 execute skylight-telemetry --remote --file schema.sql",
+    "schema:local": "wrangler d1 execute skylight-telemetry --local --file schema.sql"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260901.0",
+    "wrangler": "^4.148.0"
+  }
+}

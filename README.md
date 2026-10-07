@@ -399,6 +399,34 @@ RTL-SDR ──USB──> dump1090-fa ──> aircraft.json (:8080)
 - Satellite elements: [Celestrak](https://celestrak.org/) · airport data:
   [OurAirports](https://ourairports.com/)
 
+## Updates
+
+A Pi installed with the one-line installer follows the **`release`** branch and
+updates itself nightly (`skylight-update.timer`, between 04:00 and 07:00 local,
+fast-forward only; a failed build rolls back). Work lands on `main`; promote it
+once it has run on your own Pi:
+
+```bash
+git push origin main:release
+```
+
+Turn the updater off on a Pi with `sudo systemctl disable --now skylight-update.timer`
+(or install with `AUTO_UPDATE=0`). Manual update: run the install line again.
+
+## Privacy and the usage ping
+
+Skylight only listens to aircraft; it never transmits on the radio. It talks to
+the internet for the free feed (which receives your configured location), map
+search, flight routes, satellite elements and airport data. Once a day it also
+sends an **anonymous usage ping** to `telemetry.skylightceiling.com`: a random
+install id, the version, `radio` or `api`, the CPU architecture and Pi model.
+No location, no IP is stored. It exists so the project knows roughly how many
+ceilings are out there. Turn it off in `/control` → **System** → *Anonymous
+usage ping*, or with `SKYLIGHT_TELEMETRY=0` in the service environment. The
+ping's reply can carry a replacement aggregator URL, adopted only while you are
+still on the shipped default - the remote fix for a free feed closing down. The
+Worker lives in [`telemetry/`](telemetry/).
+
 ## Support
 
 Skylight is free and open source and always will be. If it ends up on your ceiling and

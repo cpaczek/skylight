@@ -252,6 +252,13 @@ export interface Config {
    *  down with it (#66). */
   apiUrl: string;
 
+  // --- usage ping (anonymous, opt-out) ---
+  /** Once a day, tell skylightceiling.com this install is alive: a random id,
+   *  the version, radio|api, CPU arch and Pi model. Never a location. */
+  telemetry: boolean;
+  /** The random id in that ping; generated on first run and kept here. */
+  installId: string;
+
   // --- calibration (tune against a real overhead pass) ---
   /** Rotate the whole field, degrees. */
   rotationDeg: number;
@@ -359,6 +366,9 @@ export const DEFAULT_CONFIG: Config = {
 
   radioUrl: "http://localhost:8080/data/aircraft.json",
   apiUrl: "https://opendata.adsb.fi/api/v3/lat/{lat}/lon/{lon}/dist/{r}",
+
+  telemetry: true,
+  installId: "",
 
   rotationDeg: 0,
   mirrorX: true,

@@ -641,6 +641,9 @@ export function Control() {
         </Section>
 
         <Section title="System">
+          <Row label="Anonymous usage ping" hint="once a day: a random id, version, radio or internet feed, Pi model. Never your location">
+            <Toggle value={cfg.telemetry} onChange={(v) => set({ telemetry: v })} />
+          </Row>
           <button className="reset" onClick={() => conn.resetConfig()}>
             Reset all to defaults
           </button>
