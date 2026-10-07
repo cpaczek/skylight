@@ -336,6 +336,8 @@ export interface Config {
   satelliteLabels: boolean;
   /** Draw the naked-eye planets (Venus, Jupiter, Mars, Saturn, Mercury). */
   showPlanets: boolean;
+  /** Surface upcoming local sky events (moon phases, eclipses, meteor showers, etc.) as a "look up" nudge. */
+  showSkyEvents: boolean;
   /** Per-constellation asterism line visibility. Missing/unknown ids default to visible. */
   constellations: Record<string, boolean>;
   /** Faintest star magnitude to draw (higher = more stars). */
@@ -437,6 +439,7 @@ export const DEFAULT_CONFIG: Config = {
   showSatellites: true,
   satelliteLabels: false,
   showPlanets: true,
+  showSkyEvents: false,
   constellations: Object.fromEntries(CONSTELLATIONS.map((c) => [c.id, true])),
   starMagLimit: 2.6,
   starLabelMagLimit: 0.3,
