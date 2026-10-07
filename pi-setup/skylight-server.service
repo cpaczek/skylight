@@ -12,7 +12,7 @@ WorkingDirectory=__APPDIR__
 Environment=NODE_ENV=production
 Environment=PORT=3000
 Environment=HOST=0.0.0.0
-Environment=DATA_SOURCE=radio
+Environment=DATA_SOURCE=__DATA_SOURCE__
 Environment=AIRCRAFT_JSON_URL=http://localhost:8080/data/aircraft.json
 ExecStart=__PNPM__ -F server start
 Restart=always

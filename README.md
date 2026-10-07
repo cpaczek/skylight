@@ -5,8 +5,9 @@
 </p>
 
 <p align="center">
-  <a href="https://skylightceiling.com"><b>🛰️ Get notified when I launch on a crowdfunding platform → skylightceiling.com</b></a>
-  <br><sub>A ready-made kit is coming. Join the waitlist for early access &amp; launch pricing.</sub>
+  <a href="https://skylightceiling.com/build"><b>🛠️ Non-technical build guide → skylightceiling.com/build</b></a>
+  <br><sub>What to buy (with or without a radio), one command to install, tune it from your phone.
+  Setting it up with an AI assistant? Point it at <a href="https://skylightceiling.com/llms.txt">skylightceiling.com/llms.txt</a>.</sub>
 </p>
 
 <p align="center">
@@ -74,7 +75,7 @@ for your location and time. Tune everything from your phone.
 
 | Part | Suggested | Notes |
 |---|---|---|
-| Receiver | **RTL-SDR Blog V4 + dipole** | The included dipole is plenty - planes are nearly overhead. The **V3 and V5 work identically** (same RTL2832U); if you're buying now, the V4/V5 are the current models. |
+| Receiver | **Nooelec RTL-SDR v5 bundle** (NESDR SMArt v5) | Tested with Skylight; comes with a magnetic antenna base and three antenna rods. Any RTL2832U stick works (the installer builds the rtl-sdr-blog driver, which covers the RTL-SDR Blog V3, V4 and the new **V4L**, FlightAware Pro Stick, generics). The small included antenna is plenty - planes are nearly overhead. The **V4** this build used is end-of-life. |
 | Compute | **Raspberry Pi 5 (8 GB)** | Decode + render. Active cooling for 24/7. See [minimum specs](#minimum-specs) for lighter setups. |
 | Projector | A 1080p projector pointed up | Laser (e.g. Optoma GT2100HDR) gives the deepest blacks, but it's overkill - see the budget tip below. |
 | Display link | micro-HDMI → HDMI | The Pi 5 uses **micro**-HDMI (not mini). |
@@ -148,9 +149,23 @@ DATA_SOURCE=radio pnpm dev
 
 ## Raspberry Pi appliance
 
-Full walkthrough in [`pi-setup/README.md`](pi-setup/README.md): flash + headless
-provision the SD card, install the driver + decoder + app, and set up the boot-to-kiosk
-display. Once it's running, push updates from your dev machine with:
+Full walkthrough in [`pi-setup/README.md`](pi-setup/README.md) (and a no-jargon
+version at [skylightceiling.com/build](https://skylightceiling.com/build)): flash the
+SD card (or use a kit's pre-loaded one), then in the Pi's Terminal type one line. It
+downloads Skylight, installs the driver + decoder (when a radio is plugged in), the
+app, the service and the boot-to-kiosk display, names the Pi `skylight`, and reboots:
+
+```bash
+curl -sL skylightceiling.com/install | bash
+```
+
+The same thing without the website in the loop:
+
+```bash
+git clone https://github.com/cpaczek/skylight.git ~/skylight && cd ~/skylight && ./pi-setup/install-on-pi.sh && ./pi-setup/setup-kiosk.sh && sudo reboot
+```
+
+Once it's running, push updates from your dev machine with:
 
 ```bash
 PI_HOST=skylight.local ./scripts/deploy-to-pi.sh
@@ -383,6 +398,14 @@ RTL-SDR ──USB──> dump1090-fa ──> aircraft.json (:8080)
   fallback feed: [adsb.fi](https://adsb.fi/) · [adsb.lol](https://adsb.lol/)
 - Satellite elements: [Celestrak](https://celestrak.org/) · airport data:
   [OurAirports](https://ourairports.com/)
+
+## Support
+
+Skylight is free and open source and always will be. If it ends up on your ceiling and
+you'd like to say thanks, tips are welcome and never expected:
+[Venmo @Cameron-Paczek](https://venmo.com/u/Cameron-Paczek) · Bitcoin
+`3LK4CntB3CppQkr7o3ZMUNRwwiW9DJzJuC`. Problems and questions go to the
+[Issues tab](https://github.com/cpaczek/skylight/issues).
 
 ## License
 

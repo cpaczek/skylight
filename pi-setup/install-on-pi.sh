@@ -38,9 +38,30 @@ fi
 echo "==> apt update + base packages"
 sudo apt-get update
 sudo apt-get install -y git build-essential cmake libusb-1.0-0-dev pkg-config \
-  libncurses-dev unclutter
+  libncurses-dev unclutter usbutils
 
-echo "==> RTL-SDR Blog V4 driver"
+# Where aircraft come from. "radio" = an RTL-SDR plugged into this Pi, decoded
+# locally; "api" = the free adsb.fi aggregator over the internet (no hardware).
+# Auto-detected when not given: any RTL2832U-based dongle on USB (RTL-SDR Blog,
+# FlightAware Pro Stick, Nooelec, generics all enumerate as 0bda:2838/2832)
+# means radio. Override with DATA_SOURCE=radio|api. Re-running the installer
+# after plugging in a radio switches an api install over.
+DATA_SOURCE="${DATA_SOURCE:-}"
+if [ -z "$DATA_SOURCE" ]; then
+  if lsusb 2>/dev/null | grep -qiE "0bda:(2838|2832)"; then
+    DATA_SOURCE=radio
+  else
+    DATA_SOURCE=api
+  fi
+  echo "==> No DATA_SOURCE given; detected: $DATA_SOURCE$([ "$DATA_SOURCE" = api ] && echo ' (no RTL-SDR found on USB)')"
+fi
+case "$DATA_SOURCE" in
+  radio|api) ;;
+  *) echo "ERROR: DATA_SOURCE must be 'radio' or 'api' (got '$DATA_SOURCE')." >&2; exit 1 ;;
+esac
+
+if [ "$DATA_SOURCE" = radio ]; then
+echo "==> RTL-SDR Blog driver (works with V3/V4/V5, FlightAware Pro Stick, Nooelec, generic RTL2832U)"
 if ! command -v rtl_test >/dev/null 2>&1; then
   SRC=/tmp/rtl-sdr-blog
   rm -rf "$SRC"
@@ -51,6 +72,7 @@ if ! command -v rtl_test >/dev/null 2>&1; then
   sudo ldconfig
 fi
 echo "==> Blacklisting stock DVB-T modules"
+sudo mkdir -p /etc/modprobe.d
 sudo tee /etc/modprobe.d/blacklist-rtlsdr.conf >/dev/null <<'EOF'
 blacklist dvb_usb_rtl28xxu
 blacklist rtl2832
@@ -115,6 +137,9 @@ EOF
   sudo systemctl enable dump1090-fa.service dump1090-json.service
   sudo systemctl restart dump1090-fa.service dump1090-json.service
 fi
+else
+  echo "==> api source: skipping the RTL-SDR driver and decoder (re-run with a radio plugged in to add them)"
+fi
 
 echo "==> Node.js + pnpm (via corepack)"
 if ! command -v node >/dev/null 2>&1; then
@@ -136,21 +161,38 @@ sudo sed \
   -e "s#__USER__#$USER_NAME#g" \
   -e "s#__APPDIR__#$APPDIR#g" \
   -e "s#__PNPM__#$PNPM_BIN#g" \
+  -e "s#__DATA_SOURCE__#$DATA_SOURCE#g" \
   "$APPDIR/pi-setup/skylight-server.service" \
   | sudo tee /etc/systemd/system/skylight-server.service >/dev/null
 sudo systemctl daemon-reload
 sudo systemctl enable --now skylight-server.service
 
+# Give the Pi a predictable name so the phone URL is always
+# http://skylight.local:3000/control, whichever way the card was prepared.
+# Only the stock name is replaced; a name the owner chose is left alone.
+if command -v raspi-config >/dev/null 2>&1 && [ "$(hostname)" = "raspberrypi" ]; then
+  sudo raspi-config nonint do_hostname "${HOSTNAME_PI:-skylight}" \
+    && echo "==> Pi renamed to ${HOSTNAME_PI:-skylight} (reachable as ${HOSTNAME_PI:-skylight}.local after reboot)"
+fi
+
 IP="$(hostname -I | awk '{print $1}')"
 echo
 echo "Done."
 echo "  Display : http://localhost:3000/  (point Chromium kiosk here — see setup-kiosk.sh)"
-echo "  Control : http://$IP:3000/control  (open on your phone)"
-echo "  Decoder : http://$IP:8080/data/aircraft.json  (raw decoded feed)"
+echo "  Control : http://$IP:3000/control  (open on your phone; also http://$(hostname).local:3000/control)"
+if [ "$DATA_SOURCE" = radio ]; then
+  echo "  Source  : radio (local RTL-SDR; adsb.fi merged in as a supplement)"
+  echo "  Decoder : http://$IP:8080/data/aircraft.json  (raw decoded feed)"
+else
+  echo "  Source  : api (adsb.fi, no radio) - re-run with a radio plugged in to switch"
+fi
 if [ -n "$LAT" ]; then
   echo "  Receiver: $LAT, $LON"
 else
   echo "  Receiver: position not set (optional - re-run with LAT=.. LON=.. to set it)"
 fi
 echo
-echo "Verify decode first:  rtl_test -t   then   curl -s localhost:8080/data/aircraft.json | head"
+if [ "$DATA_SOURCE" = radio ]; then
+  echo "Verify decode:  curl -s localhost:8080/data/aircraft.json | head"
+  echo "  (rtl_test -t only works while the decoder is stopped: sudo systemctl stop dump1090-fa)"
+fi

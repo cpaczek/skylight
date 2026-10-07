@@ -5,7 +5,12 @@
 set -euo pipefail
 
 URL="${URL:-http://localhost:3000/}"
-CHROMIUM="$(command -v chromium-browser || command -v chromium || echo chromium-browser)"
+CHROMIUM="$(command -v chromium-browser || command -v chromium || true)"
+if [ -z "$CHROMIUM" ]; then
+  echo "==> Chromium not found; installing it"
+  sudo apt-get update && sudo apt-get install -y chromium
+  CHROMIUM="$(command -v chromium-browser || command -v chromium)"
+fi
 
 LAUNCH="$HOME/.local/bin/skylight-kiosk.sh"
 mkdir -p "$HOME/.local/bin"
@@ -26,14 +31,27 @@ exec $CHROMIUM \\
 EOF
 chmod +x "$LAUNCH"
 
-# Disable screen blanking / DPMS for the Wayland session.
-if [ -d "$HOME/.config/wayfire.ini" ] || grep -qi wayfire /etc/xdg/labwc/* 2>/dev/null; then :; fi
+# Keep the screen awake. Raspberry Pi OS blanks the display after 10 minutes
+# (swayidle under labwc, dpms_timeout under wayfire, xorg conf under X11);
+# raspi-config knows which one this image uses, so let it turn blanking off.
+if command -v raspi-config >/dev/null 2>&1; then
+  sudo raspi-config nonint do_blanking 1 && echo "==> screen blanking disabled (raspi-config)" \
+    || echo "WARN: could not disable screen blanking via raspi-config; do it in Preferences > Raspberry Pi Configuration > Display"
+fi
+
+# The Pi 5 (and 4) turn an HDMI port off when nothing answers on it at boot
+# and don't always re-detect a projector that is switched on later. Force the
+# first port (next to the USB-C power socket) to stay live at 1080p60.
+CMDLINE=/boot/firmware/cmdline.txt
+if [ -f "$CMDLINE" ] && ! grep -q "video=HDMI-A-1" "$CMDLINE"; then
+  sudo sed -i '1 s/$/ video=HDMI-A-1:1920x1080@60D/' "$CMDLINE"
+  echo "==> forced HDMI-A-1 on at boot ($CMDLINE)"
+fi
 
 if command -v labwc >/dev/null 2>&1; then
   mkdir -p "$HOME/.config/labwc"
   AUTOSTART="$HOME/.config/labwc/autostart"
   grep -q skylight-kiosk "$AUTOSTART" 2>/dev/null || echo "$LAUNCH &" >> "$AUTOSTART"
-  # Keep the screen awake.
   echo "==> labwc detected; kiosk added to $AUTOSTART"
 elif command -v wayfire >/dev/null 2>&1; then
   INI="$HOME/.config/wayfire.ini"
